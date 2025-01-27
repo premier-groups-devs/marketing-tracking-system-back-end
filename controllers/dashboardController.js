@@ -30,6 +30,7 @@ exports.dashboard = async (req, res) => {
 
   try {
     const dashboardData = await exports.getDashboardData(req.query.startDate, req.query.endDate);
+    //console.log('Imprimiendo: '+JSON.stringify(dashboardData))
 
     return res.status(200).json({
       success: true,
@@ -55,7 +56,7 @@ exports.getDashboardData = async (startDate, endDate) => {
     // Inicializa las variables para los estatus
     let arrayChannelMarketing = [];
     connection = await db.getConnection();    
-    const [results] = await connection.query('CALL GetDashboardData(?, ?)', [startDate, endDate]);
+    const [results] = await connection.query('CALL GetMarketingDashboardData(?, ?)', [startDate, endDate]);
 
     if(results[0].length > 0)
       arrayChannelMarketing = results[0];

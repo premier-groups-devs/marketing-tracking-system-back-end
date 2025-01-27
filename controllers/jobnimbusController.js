@@ -161,6 +161,7 @@ async function postSaveContacts(contactDataArray) {
             , 'cf_double_19'
             , 'cf_double_8'
             , 'cf_string_15'
+            , 'cf_double_5'
         ];
 
         for (const contactData of contactDataArray) {
