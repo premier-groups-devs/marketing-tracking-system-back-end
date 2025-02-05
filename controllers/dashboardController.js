@@ -180,4 +180,4 @@ exports.startDashboardMonitor = async () => {
   }, one_minute_interval);
 };
 
-//exports.startDashboardMonitor();
+exports.startDashboardMonitor();
