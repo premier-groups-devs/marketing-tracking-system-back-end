@@ -94,7 +94,7 @@ exports.getContactsInterval = async (jnid, manualStartDate = null) => {
                     range: {
                         date_created: {
                             gte: startDateTimestamp, // Fecha de inicio (timestamp)
-                            lte: 1731703899//Math.floor(Date.now() / 1000)  // Fecha de fin (timestamp actual)
+                            lte: Math.floor(Date.now() / 1000) //1731703899//Math.floor(Date.now() / 1000)  // Fecha de fin (timestamp actual)
                         }
                     }
                 }

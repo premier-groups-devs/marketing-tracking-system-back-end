@@ -55,14 +55,54 @@ exports.getDashboardData = async (startDate, endDate) => {
 
     // Inicializa las variables para los estatus
     let arrayChannelMarketing = [];
+    let arrayLeadMarketing = [];
+    let arrayRevenueMarketing = [];
     connection = await db.getConnection();    
     const [results] = await connection.query('CALL GetMarketingDashboardData(?, ?)', [startDate, endDate]);
 
     if(results[0].length > 0)
       arrayChannelMarketing = results[0];
-   
+
+    if(results[1].length > 0) {
+      arrayLeadMarketing = results[1].reduce((acc, item) => {
+        const month = item.month; // Asegúrate de que 'month' es la propiedad correcta en tu objeto
+        if (!acc[month]) {
+          acc[month] = [];
+        }
+        acc[month].push({
+          city: item.city_name,
+          count: item.count,
+          mount: item.mount,
+          percentage: Number(item.percentage).toFixed(2),
+          visible: true,
+          colors_charts: item.colors_charts
+        });
+        return acc;
+      }, {});
+    }  
+
+    if(results[2].length > 0) {
+      arrayRevenueMarketing = results[2].reduce((acc, item) => {
+        const month = item.month; // Asegúrate de que 'month' es la propiedad correcta en tu objeto
+        if (!acc[month]) {
+          acc[month] = [];
+        }
+        acc[month].push({
+          city: item.city_name,
+          count: item.count,
+          mount: item.mount,
+          percentage: Number(item.percentage).toFixed(2),
+          visible: true,
+          colors_charts: item.colors_charts
+        });
+        return acc;
+      }, {});
+    }  
+    
     return {
       arrayChannelMarketing: arrayChannelMarketing
+      , arrayLeadMarketing: arrayLeadMarketing
+      , arrayRevenueMarketing: arrayRevenueMarketing
     };
   } catch (error) {
     console.error('Error en la consulta:', error);
