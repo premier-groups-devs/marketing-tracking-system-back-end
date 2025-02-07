@@ -93,7 +93,7 @@ exports.getContactsInterval = async (jnid, manualStartDate = null) => {
                 {
                     range: {
                         date_created: {
-                            gte: 1514764800, // Fecha de inicio (timestamp)
+                            gte: startDateTimestamp, // Fecha de inicio (timestamp)
                             lte: Math.floor(Date.now() / 1000) //1731703899//Math.floor(Date.now() / 1000)  // Fecha de fin (timestamp actual)
                         }
                     }
@@ -103,7 +103,6 @@ exports.getContactsInterval = async (jnid, manualStartDate = null) => {
 
         const response = await jobNimbusAPI.get(`/contacts/?filter=${filterQuery}`);
         const result = response.data;
-        console.log('result: '+result.results.length );
         if(result.results && result.results.length > 0)
             await postSaveContacts(result.results);
         
@@ -173,6 +172,12 @@ async function postSaveContacts(contactDataArray) {
                     values.push(filteredContactData.date_create);
                 }
 
+                // Ensure status_name is not null
+                if (!columns.includes('status_name')) {
+                    columns.push('status_name');
+                    values.push(filteredContactData.status_name || 'Unknown');
+                }
+
                 const placeholders = columns.map(() => '?').join(', ');
 
                 const insertQuery = `
@@ -188,7 +193,7 @@ async function postSaveContacts(contactDataArray) {
                     INSERT INTO jobnimbus_contacts_status_historicals (id_jobnimbus_contacts, status_name, date_create)
                     VALUES (?, ?, ?)
                 `;
-                await connection.execute(historicalQuery, [insertedId, filteredContactData.status_name, filteredContactData.date_create]);
+                await connection.execute(historicalQuery, [insertedId, filteredContactData.status_name || 'Unknown', filteredContactData.date_create]);
             }
         }
     } catch (error) {
@@ -234,6 +239,8 @@ exports.updateProjects = async () => {
             SELECT jnid, status_name, id 
             FROM jobnimbus_contacts 
             WHERE status_name NOT IN (?, ?, ?)
+            AND MONTH(date_created) = MONTH(CURRENT_DATE())
+            AND YEAR(date_created) = YEAR(CURRENT_DATE())
         `;
         const [contacts] = await connection.execute(query, excludedStatuses);
         connection.release();
@@ -285,6 +292,12 @@ exports.updateProjects = async () => {
                         }
                     }
 
+                    // Ensure status_name is not null
+                    if (!updateColumns.includes('status_name')) {
+                        updateColumns.push('status_name');
+                        updateValues.push(result.status_name || 'Unknown');
+                    }
+
                     const updateQuery = `
                         UPDATE jobnimbus_contacts 
                         SET ${updateColumns.join(', ')}, date_updated = NOW()
@@ -299,7 +312,7 @@ exports.updateProjects = async () => {
                         INSERT INTO jobnimbus_contacts_status_historicals (id_jobnimbus_contacts, status_name, date_create)
                         VALUES (?, ?, NOW())
                     `;
-                    await connection.execute(historicalQuery, [id, result.status_name]);
+                    await connection.execute(historicalQuery, [id, result.status_name || 'Unknown']);
                     connection.release();
                 } else {
                     console.log(`No se necesita actualizar el contacto con jnid ${jnid}`);
