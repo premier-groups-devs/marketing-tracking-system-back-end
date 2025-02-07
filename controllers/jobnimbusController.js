@@ -82,7 +82,7 @@ exports.getContactsInterval = async (jnid, manualStartDate = null) => {
     try {
 
         let startDateTimestamp = manualStartDate ? manualStartDate : await getLastCreatedDate();
-        console.log('startDateTimestamp: '+startDateTimestamp+' - '+Math.floor(Date.now() / 1000) )
+        //console.log('startDateTimestamp: '+startDateTimestamp+' - '+Math.floor(Date.now() / 1000) )
         if (!startDateTimestamp) {
             console.log('No se encontró una fecha en la base de datos y no se proporcionó una fecha manual.');
             return;
@@ -93,7 +93,7 @@ exports.getContactsInterval = async (jnid, manualStartDate = null) => {
                 {
                     range: {
                         date_created: {
-                            gte: startDateTimestamp, // Fecha de inicio (timestamp)
+                            gte: 1514764800, // Fecha de inicio (timestamp)
                             lte: Math.floor(Date.now() / 1000) //1731703899//Math.floor(Date.now() / 1000)  // Fecha de fin (timestamp actual)
                         }
                     }
@@ -103,7 +103,7 @@ exports.getContactsInterval = async (jnid, manualStartDate = null) => {
 
         const response = await jobNimbusAPI.get(`/contacts/?filter=${filterQuery}`);
         const result = response.data;
-       
+        console.log('result: '+result.results.length );
         if(result.results && result.results.length > 0)
             await postSaveContacts(result.results);
         
@@ -317,5 +317,3 @@ exports.updateProjects = async () => {
     }
 };
 
-// Schedule the updateProjects function to run every 5 minutes
-setInterval(exports.updateProjects, 5 * 60 * 1000);

@@ -29,7 +29,7 @@ exports.dashboard = async (req, res) => {
   }
 
   try {
-    const dashboardData = await exports.getDashboardData(req.query.startDate, req.query.endDate);
+    const dashboardData = await exports.getDashboardData(req.query.startDate, req.query.endDate, req.query.citys, req.query.invalid);
     //console.log('Imprimiendo: '+JSON.stringify(dashboardData))
 
     return res.status(200).json({
@@ -47,7 +47,7 @@ exports.dashboard = async (req, res) => {
   }
 };
 
-exports.getDashboardData = async (startDate, endDate) => {
+exports.getDashboardData = async (startDate, endDate, citys, invalid) => {
   console.log('en getDashboardData ***');
   let connection;
 
@@ -57,8 +57,10 @@ exports.getDashboardData = async (startDate, endDate) => {
     let arrayChannelMarketing = [];
     let arrayLeadMarketing = [];
     let arrayRevenueMarketing = [];
+    let arrayCitys = [];
     connection = await db.getConnection();    
-    const [results] = await connection.query('CALL GetMarketingDashboardData(?, ?)', [startDate, endDate]);
+    //console.log('startDate: '+startDate+' endDate: '+endDate+' citys: '+citys);
+    const [results] = await connection.query('CALL GetMarketingDashboardData(?, ?, ?, ?)', [startDate, endDate, citys, invalid]);
 
     if(results[0].length > 0)
       arrayChannelMarketing = results[0];
@@ -99,10 +101,14 @@ exports.getDashboardData = async (startDate, endDate) => {
       }, {});
     }  
     
+    if(results[3].length > 0) 
+      arrayCitys = results[3];
+
     return {
       arrayChannelMarketing: arrayChannelMarketing
       , arrayLeadMarketing: arrayLeadMarketing
       , arrayRevenueMarketing: arrayRevenueMarketing
+      , arrayCitys: arrayCitys
     };
   } catch (error) {
     console.error('Error en la consulta:', error);
@@ -208,8 +214,10 @@ exports.startDashboardMonitor = async () => {
       const currentYear = new Date().getFullYear();
       const startDate = `${currentYear}-01-01`;
       const endDate = `${currentYear}-12-31`;
+      const citys = 0;
+      const invalid = 0;
     
-      const newData = await exports.getDashboardData(startDate, endDate);
+      const newData = await exports.getDashboardData(startDate, endDate, citys, invalid);
       if (await exports.hasDataChanged(newData)) {
         previousData = newData;
         broadcastDashboard({ message: true });
