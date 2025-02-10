@@ -4,9 +4,7 @@
   "description": "marketing-tracking-system-back-end",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js",
-    "postinstall": "npm install --production"
+    "start": "node app.js"
   },
   "dependencies": {
     "@vitalets/google-translate-api": "^9.2.0",
@@ -24,9 +22,6 @@
     "mysql2": "^2.3.3",
     "socket.io": "^4.8.1",
     "ws": "^7.5.3"
-  },
-  "devDependencies": {
-    "nodemon": "^2.0.22"
   },
   "author": "Ronny Simosa",
   "license": "ISC",
