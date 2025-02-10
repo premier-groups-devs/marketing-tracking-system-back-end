@@ -133,6 +133,12 @@ async function postSaveContacts(contactDataArray) {
                 return obj;
             }, {});
 
+            // Validar que source_name, status_name y location no sean nulos o vacíos
+            if (!filteredContactData.source_name || !filteredContactData.status_name || !filteredContactData.location) {
+                console.log('source_name, status_name o location son nulos o vacíos. No se guardará el contacto.');
+                continue;
+            }
+
             // Convert date_created from ISO timestamp to DATETIME format and save it in date_create
             if (filteredContactData.date_created) {
                 const date = new Date(filteredContactData.date_created * 1000);
@@ -251,6 +257,12 @@ exports.updateProjects = async () => {
             try {
                 const response = await jobNimbusAPI.get(`/contacts/${jnid}`);
                 const result = response.data;
+
+                // Validar que source_name, status_name y location no sean nulos o vacíos
+                if (!result.source_name || !result.status_name || !result.location) {
+                    console.log('source_name, status_name o location son nulos o vacíos. No se actualizará el contacto.');
+                    return;
+                }
 
                 if (result.status_name === 'Signed Contract' && (!result.cf_double_5 || result.cf_double_5 <= 0)) {
                     console.log(`El contacto con jnid ${jnid} tiene el estado 'Signed Contract' pero cf_double_5 es 0 o null. No se actualizará.`);
