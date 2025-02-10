@@ -4,7 +4,7 @@ const dashboardController = require('../controllers/dashboardController');
 const { authenticateToken } = require('../middlewares/authMiddleware'); // Importar el middleware
 
 const router = express.Router();
-
+ 
 /*
 router.post(
   '/register',
