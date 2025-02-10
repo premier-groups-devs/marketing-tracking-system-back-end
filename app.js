@@ -1,5 +1,6 @@
 // app.js
 const express = require('express');
+const dotenv = require('dotenv');
 const helmet = require('helmet');
 const cors = require('cors');
 const routes = require('./routes');
@@ -8,6 +9,8 @@ const { setupWebSocket } = require('./services/websocket');
 const { clearRevokedTokens } = require('./middlewares/authMiddleware');
 const http = require('http'); // Importa http para crear el servidor
 const app = express();
+
+dotenv.config(); // Ensure environment variables are loaded
 
 // Usa cookie-parser para manejar cookies
 app.use(cookieParser());
@@ -45,6 +48,7 @@ app.use((err, req, res, next) => {
 const server = http.createServer(app);
 //console.log('ver: '+JSON.stringify(server))
 setupWebSocket(server); // Usa la función setupWebSocket para inicializar wss
+console.log('WebSocket setup complete'); // Add a log to confirm WebSocket setup
 
 
 // Puerto de escucha
@@ -56,4 +60,4 @@ server.listen(PORT, () => {
 // Limpiar los tokens revocados cada hora
 /*setInterval(() => {
   clearRevokedTokens();
-}, process.env.MAXAGE);//3600000); // 3600000 ms = 1 hora*/
+}, process.env.MAXAGE || 3600000); // 3600000 ms = 1 hora, fallback to 1 hour if MAXAGE is not set*/
