@@ -28,7 +28,7 @@ app.use(cors({
 }));
 
 // Middleware para procesar JSON
-app.use(express.json());
+app.use(express.json());  
 
 // Ruta de prueba de la API
 app.get('/api/health', (req, res) => {
