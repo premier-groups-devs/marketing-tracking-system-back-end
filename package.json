@@ -25,10 +25,7 @@
   },
   "author": "Ronny Simosa",
   "license": "ISC",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/premier-groups-devs/marketing-tracking-system-back-end"
-  },
+  "repository": "https://github.com/premier-groups-devs/marketing-tracking-system-back-end",
   "bugs": {
     "url": "https://github.com/deportivotuy/ReferralSystemBack/issues"
   },
