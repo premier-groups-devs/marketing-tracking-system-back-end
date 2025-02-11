@@ -16,7 +16,7 @@ const pool = mysql.createPool({
   connectTimeout: 30000, 
   ssl: {
     ca: fs.readFileSync(process.env.DB_CA_CERT), // Asegúrate de que este archivo exista y sea correcto
-    rejectUnauthorized: false, // Cambia a true en producción
+    rejectUnauthorized: true, // Cambia a true en producción
   },
 });
 
