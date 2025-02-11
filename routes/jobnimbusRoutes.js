@@ -15,7 +15,7 @@ module.exports = router;
 
 if (!isNaN(five_minute_interval)) {
     setInterval(() => {
-        jobnimbusController.getContactsInterval('m3j7sg8dy3hkb13ej5obpbc',1553810955);
+        jobnimbusController.getContactsInterval('m3j7sg8dy3hkb13ej5obpbc','');
         jobnimbusController.updateProjects();
     }, five_minute_interval); 
 } else {

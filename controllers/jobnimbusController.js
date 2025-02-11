@@ -58,16 +58,16 @@ const allowedColumns = [
     , 'last_invoice_jnid'
     , 'last_invoice_number'
     , 'cf_date_6'
-    , 'cf_string_53'
+    , 'cf_string_53' 
     , 'cf_string_54'
     , 'cf_double_1'
     , 'cf_double_19'
     , 'cf_double_8'
     , 'cf_string_15'
     , 'cf_double_5'
-    , 'cf_string_61' // Service Required 
-    , 'cf_boolean_11' // true Appointment Valid , false 
-    , 'cf_date_7'   // Demo Completed
+    , 'cf_string_61'
+    , 'cf_boolean_11'
+    , 'cf_date_7'  
 ];
 
 exports.getContactsInterval = async (jnid, manualStartDate = null) => {
@@ -82,7 +82,6 @@ exports.getContactsInterval = async (jnid, manualStartDate = null) => {
     try {
 
         let startDateTimestamp = manualStartDate ? manualStartDate : await getLastCreatedDate();
-        //console.log('startDateTimestamp: '+startDateTimestamp+' - '+Math.floor(Date.now() / 1000) )
         if (!startDateTimestamp) {
             console.log('No se encontró una fecha en la base de datos y no se proporcionó una fecha manual.');
             return;
@@ -100,9 +99,10 @@ exports.getContactsInterval = async (jnid, manualStartDate = null) => {
                 }
             ]
         });
-
+       
         const response = await jobNimbusAPI.get(`/contacts/?filter=${filterQuery}`);
         const result = response.data;
+
         if(result.results && result.results.length > 0)
             await postSaveContacts(result.results);
         
@@ -115,6 +115,7 @@ exports.getContactsInterval = async (jnid, manualStartDate = null) => {
 };
 
 async function postSaveContacts(contactDataArray) {
+    console.log('Valor: '+contactDataArray.length);
     console.log('en postSaveContacts ***');
 
     let connection;
@@ -129,7 +130,16 @@ async function postSaveContacts(contactDataArray) {
 
         for (const contactData of contactDataArray) {
             const filteredContactData = allowedColumns.reduce((obj, key) => {
-                obj[key] = contactData.hasOwnProperty(key) ? contactData[key] : null;
+                if (contactData.hasOwnProperty(key)) {
+                    obj[key] = contactData[key];
+                } else {
+                    // Asignar valores por defecto para los campos faltantes
+                    if (key === 'cf_double_1' || key === 'cf_double_19' || key === 'cf_double_8' || key === 'cf_double_5' || key === 'cf_boolean_11' || key === 'last_estimate_date_created') {
+                        obj[key] = 0; // Valor por defecto para campos numéricos
+                    } else {
+                        obj[key] = null; // Valor por defecto para otros campos
+                    }
+                }
                 return obj;
             }, {});
 
@@ -166,7 +176,19 @@ async function postSaveContacts(contactDataArray) {
                             value = JSON.stringify(value);
                         } else if (value === '') {
                             value = null;
+                        } else if (typeof value === 'number' && isNaN(value)) {
+                            value = 0; // Manejar valores NaN convirtiéndolos a 0
+                        } else if (value === null && key.startsWith('cf_double_')) {
+                            value = 0; // Convertir null a 0 para columnas numéricas
+                        } else if (value === null && key.startsWith('cf_boolean_')) {
+                            value = 0; // Convertir null a 0 para columnas booleanas
                         }
+
+                        // Asegurar que los valores nulos no se pasen como 'null' (cadena)
+                        if (value === null) {
+                            value = null; // Opcional: si MySQL soporta NULL directo en la consulta
+                        }
+                        
                         columns.push(key);
                         values.push(value);
                     }
@@ -185,6 +207,10 @@ async function postSaveContacts(contactDataArray) {
                 }
 
                 const placeholders = columns.map(() => '?').join(', ');
+
+                // Agregar console.log para columns y placeholders
+                //console.log('Columns:', columns.join(', '));
+                //console.log('Placeholders:', placeholders);
 
                 const insertQuery = `
                     INSERT INTO jobnimbus_contacts (${columns.join(', ')})
