@@ -59,7 +59,6 @@ exports.getDashboardData = async (startDate, endDate, citys, invalid) => {
     let arrayRevenueMarketing = [];
     let arrayCitys = [];
     connection = await db.getConnection();    
-    //console.log('startDate: '+startDate+' endDate: '+endDate+' citys: '+citys);
     const [results] = await connection.query('CALL GetMarketingDashboardData(?, ?, ?, ?)', [startDate, endDate, citys, invalid]);
 
     if(results[0].length > 0)
