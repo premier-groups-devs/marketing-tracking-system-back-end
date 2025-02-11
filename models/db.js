@@ -1,8 +1,10 @@
 const mysql = require('mysql2/promise');
-const dotenv = require('dotenv'); 
+const dotenv = require('dotenv');
 const fs = require('fs');
 
 dotenv.config();
+
+const serverCa = [fs.readFileSync(process.env.DB_CA_CERT, "utf8")]; // Ensure the correct path to the certificate
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
@@ -13,10 +15,10 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  connectTimeout: 30000, 
+  connectTimeout: 30000,
   ssl: {
-    ca: fs.readFileSync(process.env.DB_CA_CERT), // Asegúrate de que este archivo exista y sea correcto
-    rejectUnauthorized: true, // Cambia a true en producción
+    ca: serverCa,
+    rejectUnauthorized: true, // Ensure this is true for secure connections
   },
 });
 
