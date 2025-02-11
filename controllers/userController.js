@@ -101,9 +101,9 @@ exports.loginUser = async (req, res) => {
 
     res.cookie(`token`, token, {
       httpOnly: true, // Solo accesible a través de HTTP
-      secure: process.env.NODE_ENV === 'production', // Solo en HTTPS en producción
+      secure: true, // Solo en HTTPS en producción
       maxAge: one_hour_interval, // 1 hora en milisegundos
-      sameSite: 'Strict', // Para proteger contra CSRF
+      sameSite: 'Lax', // Para proteger contra CSRF
     })
 
     const currentTime = moment(); // Fecha y hora actual
@@ -151,7 +151,7 @@ exports.logoutUser = (req, res) => {
     // Limpiar la cookie del cliente
     res.clearCookie("token", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Usar `true` en producción si usas HTTPS
+      secure: true, // Usar `true` en producción si usas HTTPS
       sameSite: "Strict"
     });
 
@@ -198,7 +198,7 @@ exports.renewToken = (req, res) => {
     res.cookie('token', newToken, { 
       httpOnly: true, 
       secure: process.env.NODE_ENV === 'production', 
-      sameSite: 'Strict',
+      sameSite: 'Lax',
       maxAge: one_hour_interval // 1 hora de expiración
     });
 
