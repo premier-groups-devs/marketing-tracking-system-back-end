@@ -103,7 +103,7 @@ exports.loginUser = async (req, res) => {
       httpOnly: true, // Solo accesible a través de HTTP
       secure: true, // Solo en HTTPS en producción
       maxAge: one_hour_interval, // 1 hora en milisegundos
-      sameSite: 'Lax', // Para proteger contra CSRF
+      sameSite: 'None', // Para proteger contra CSRF
     })
 
     const currentTime = moment(); // Fecha y hora actual
@@ -152,7 +152,7 @@ exports.logoutUser = (req, res) => {
     res.clearCookie("token", {
       httpOnly: true,
       secure: true, // Usar `true` en producción si usas HTTPS
-      sameSite: "Strict"
+      sameSite: "None"
     });
 
     return res.status(200).json({ 
@@ -197,8 +197,8 @@ exports.renewToken = (req, res) => {
     // Enviar el nuevo token en la cookie HttpOnly
     res.cookie('token', newToken, { 
       httpOnly: true, 
-      secure: process.env.NODE_ENV === 'production', 
-      sameSite: 'Lax',
+      secure: true, 
+      sameSite: 'None',
       maxAge: one_hour_interval // 1 hora de expiración
     });
 
