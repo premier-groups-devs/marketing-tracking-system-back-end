@@ -18,7 +18,7 @@ const pool = mysql.createPool({
   connectTimeout: 30000,
   ssl: {
     ca: serverCa,
-    rejectUnauthorized: true, // Ensure this is true for secure connections
+    rejectUnauthorized: false, // Ensure this is true for secure connections
   },
 });
 
