@@ -16,10 +16,10 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   connectTimeout: 30000,
-  ssl: {
+  /*ssl: {
     ca: serverCa,
     rejectUnauthorized: false, // Ensure this is true for secure connections
-  },
+  },*/
 });
 
 // Validar conexión
