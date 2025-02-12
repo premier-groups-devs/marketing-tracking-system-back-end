@@ -207,8 +207,8 @@ exports.hasDataChanged = async (newData) => {
 };
 
 exports.startDashboardMonitor = async () => {
-  console.log('en startDashboardMonitor ***');
   setInterval(async () => {
+    console.log('en startDashboardMonitor ***');
     try {
       const currentYear = new Date().getFullYear();
       const startDate = `${currentYear}-01-01`;
