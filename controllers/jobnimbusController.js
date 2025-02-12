@@ -1,6 +1,8 @@
 require('dotenv').config();
 const db = require('../models/db');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
 const jobNimbusAPI = axios.create({
     baseURL: 'https://app.jobnimbus.com/api1',
@@ -70,6 +72,18 @@ const allowedColumns = [
     , 'cf_date_7'  
 ];
 
+const logFilePath = path.join(__dirname, '../../logs/error.log');
+
+// Crear la carpeta logs si no existe
+if (!fs.existsSync(path.dirname(logFilePath))) {
+    fs.mkdirSync(path.dirname(logFilePath), { recursive: true });
+}
+
+const logError = (message) => {
+    const logMessage = `${new Date().toISOString()} - ${message}\n`;
+    fs.appendFileSync(logFilePath, logMessage);
+};
+
 exports.getContactsInterval = async (jnid, manualStartDate = null) => {
     console.log('en getContactsInterval ***');
 
@@ -108,6 +122,7 @@ exports.getContactsInterval = async (jnid, manualStartDate = null) => {
         
     } catch (error) {
         console.error('Error al obtener el contrato:', error.response ? error.response.data : error.message);
+        logError(`Error al obtener el contrato: ${error.response ? error.response.data : error.message}`);
     } finally {
         isProcessing = false;
         console.log('Proceso de inserción terminado.');
@@ -134,7 +149,7 @@ async function postSaveContacts(contactDataArray) {
                     obj[key] = contactData[key];
                 } else {
                     // Asignar valores por defecto para los campos faltantes
-                    if (key === 'cf_double_1' || key === 'cf_double_19' || key === 'cf_double_8' || key === 'cf_double_5' || key === 'cf_boolean_11' || key === 'last_estimate_date_created') {
+                    if (key === 'cf_double_1' || key === 'cf_double_19' || key === 'cf_double_8' || key === 'cf_double_5' || key === 'cf_boolean_11' || key === 'last_estimate_date_created' || key==='last_estimate_date_estimate' || key==='last_invoice_date_created' || key==='last_invoice_date_invoice' || key==='cf_date_6' || key==='cf_date_7') {
                         obj[key] = 0; // Valor por defecto para campos numéricos
                     } else {
                         obj[key] = null; // Valor por defecto para otros campos
@@ -230,6 +245,7 @@ async function postSaveContacts(contactDataArray) {
         }
     } catch (error) {
         console.error('Error al guardar o actualizar los datos en la base de datos:', error.message);
+        logError(`Error al guardar o actualizar los datos en la base de datos: ${error.message}`);
     } finally {
         if (connection) connection.release(); 
     }
@@ -251,6 +267,7 @@ const getLastCreatedDate = async () => {
         }
     } catch (error) {
         console.error('Error al obtener la última fecha de creación:', error.message);
+        logError(`Error al obtener la última fecha de creación: ${error.message}`);
         return null;
     }
 };
@@ -357,12 +374,14 @@ exports.updateProjects = async () => {
                 }
             } catch (error) {
                 console.error(`Error al actualizar el contacto con jnid ${jnid}:`, error.response ? error.response.data : error.message);
+                logError(`Error al actualizar el contacto con jnid ${jnid}: ${error.response ? error.response.data : error.message}`);
             }
         };
 
         await Promise.all(contacts.map(updateContact));
     } catch (error) {
         console.error('Error al obtener los contactos:', error.message);
+        logError(`Error al obtener los contactos: ${error.message}`);
     } finally {
         isUpdatingProjects = false;
     }
