@@ -188,22 +188,20 @@ exports.processMonthlyGroupData = async (data, statusName) => {
 };
 
 exports.hasDataChanged = async (newData) => { 
+  
   if (!previousData) {
-    //console.log('Inicializando previousData');
     previousData = newData;
     return true;
   }
-
+  
   const dataChanged = JSON.stringify(previousData) !== JSON.stringify(newData);
-  /*if (dataChanged) {
+  if (dataChanged) {
     console.log('Datos cambiaron');
-    console.log('Datos anteriores:', JSON.stringify(previousData));
-    console.log('Nuevos datos:', JSON.stringify(newData));
+    return true;
   } else {
     console.log('Datos no cambiaron');
-  }*/
-
-  return dataChanged;
+    return false;
+  }
 };
 
 exports.startDashboardMonitor = async () => {
@@ -211,8 +209,8 @@ exports.startDashboardMonitor = async () => {
     console.log('en startDashboardMonitor ***');
     try {
       const currentYear = new Date().getFullYear();
-      const startDate = `${currentYear}-01-01`;
-      const endDate = `${currentYear}-12-31`;
+      const startDate = `${currentYear}-${new Date().getMonth() + 1}-01`;
+      const endDate = `${currentYear}-${new Date().getMonth() + 1}-${new Date(currentYear, new Date().getMonth() + 1, 0).getDate()}`;
       const citys = 0;
       const invalid = 0;
     

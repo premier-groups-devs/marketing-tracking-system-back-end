@@ -5,17 +5,6 @@ const { authenticateToken } = require('../middlewares/authMiddleware'); // Impor
 
 const router = express.Router();
 
-// Ruta para registrar usuario (sin token)
-router.post(
-  '/register',
-  [
-    body('username').notEmpty().withMessage('El email no puede estar vacío.'),
-    body('email').isEmail(),
-    body('password').isLength({ min: 6 }),
-  ],
-  userController.registerUser
-);
-
 // Ruta para iniciar sesión (sin token)
 router.post(
   '/login',
@@ -33,7 +22,32 @@ router.post(
 
 // Ruta protegida para cerrar sesión (requiere token)
 router.post('/logout', authenticateToken, userController.logoutUser);
-// Ruta protegida para cerrar sesión (requiere token)
 router.post('/renew-token', authenticateToken, userController.renewToken);
+router.get('/list', authenticateToken, userController.userList);
+router.post(
+  '/register',
+  authenticateToken,
+  [
+    body('full_name')
+      .notEmpty().withMessage('Full name cannot be empty.')
+      .isString().withMessage('Full name must be a string.'),
+    body('email')
+      .notEmpty().withMessage('Email cannot be empty.')
+      .isEmail().withMessage('Must be a valid email.'),
+    body('username')
+      .notEmpty().withMessage('Username cannot be empty.')
+      .isString().withMessage('Username must be a string.'),
+    body('id_company')
+      .notEmpty().withMessage('Company ID cannot be empty.')
+      .isNumeric().withMessage('Company ID must be a number.'),
+    body('password')
+      .optional()
+      .isString().withMessage('Password must be a string.'),
+    body('id_user')
+      .optional()
+      .isNumeric().withMessage('User ID must be a number.'),
+  ],
+  userController.userRegister
+);
 
 module.exports = router;

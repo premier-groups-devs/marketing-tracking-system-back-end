@@ -130,7 +130,6 @@ exports.getContactsInterval = async (jnid, manualStartDate = null) => {
 };
 
 async function postSaveContacts(contactDataArray) {
-    console.log('Valor: '+contactDataArray.length);
     console.log('en postSaveContacts ***');
 
     let connection;
@@ -288,10 +287,9 @@ exports.updateProjects = async () => {
             SELECT jnid, status_name, id 
             FROM jobnimbus_contacts 
             WHERE status_name NOT IN (?, ?, ?)
-            AND MONTH(date_created) = MONTH(CURRENT_DATE())
-            AND YEAR(date_created) = YEAR(CURRENT_DATE())
+            AND YEAR(date_create) >= ?
         `;
-        const [contacts] = await connection.execute(query, excludedStatuses);
+        const [contacts] = await connection.execute(query, [...excludedStatuses, new Date().getFullYear()]);
         connection.release();
 
         const updateContact = async (contact) => {
@@ -348,20 +346,27 @@ exports.updateProjects = async () => {
                     }
 
                     // Ensure status_name is not null
-                    if (!updateColumns.includes('status_name')) {
+                    /*if (!updateColumns.includes('status_name')) {
                         updateColumns.push('status_name');
                         updateValues.push(result.status_name || 'Unknown');
+                    }*/
+
+                    if (updateColumns.length > 0) {
+                        //console.log('\x1b[33m%s\x1b[0m', 'Insert: ' + JSON.stringify(updateColumns));
+                        //console.log('\x1b[32m%s\x1b[0m', 'Into: ' + JSON.stringify(updateValues));
+                        
+                        const updateQuery = `
+                            UPDATE jobnimbus_contacts 
+                            SET ${updateColumns.join(', ')}, date_updated = NOW()
+                            WHERE jnid = ?
+                        `;
+                        updateValues.push(jnid);
+
+                        connection = await db.getConnection();
+                        await connection.execute(updateQuery, updateValues);
+                    } else {
+                        console.log(`No hay columnas para actualizar para el contacto con jnid ${jnid}`);
                     }
-
-                    const updateQuery = `
-                        UPDATE jobnimbus_contacts 
-                        SET ${updateColumns.join(', ')}, date_updated = NOW()
-                        WHERE jnid = ?
-                    `;
-                    updateValues.push(jnid);
-
-                    connection = await db.getConnection();
-                    await connection.execute(updateQuery, updateValues);
 
                     const historicalQuery = `
                         INSERT INTO jobnimbus_contacts_status_historicals (id_jobnimbus_contacts, status_name, date_create)

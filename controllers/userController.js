@@ -13,7 +13,10 @@ exports.registerUser = async (req, res) => {
 
   let connection;
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, full_name } = req.body;
+
+    // Dividir full_name en name y last_name
+    const [name, last_name] = full_name.split(' ');
 
     // Validar resultados de la validación
     const errors = validationResult(req);
@@ -36,8 +39,8 @@ exports.registerUser = async (req, res) => {
 
     // Insertar usuario en la base de datos
     const [result] = await connection.query(
-      'INSERT INTO user (username, email, password) VALUES (?, ?, ?)',
-      [username, email, hashedPassword]
+      'INSERT INTO user (username, email, password, name, last_name) VALUES (?, ?, ?, ?, ?)',
+      [username, email, hashedPassword, name, last_name]
     );
     res.status(201).json({ id: result.insertId, username, email });
   } catch (err) {
@@ -215,4 +218,83 @@ exports.renewToken = (req, res) => {
       }
     });
   });
+};
+
+exports.userList = async (req, res) => {
+  console.log('en userList ***');
+  const token = req.cookies.token; 
+
+  if (isTokenRevoked(token)) { 
+    return res.status(401).json({ 
+      success: false,
+      message: "Token is revoked." 
+    });
+  }
+
+  if (!token) {
+    return res.status(400).json({ 
+      success: false,
+      message: "Token not found in cookie." 
+    });
+  }
+
+  let connection;
+  try {
+    connection = await db.getConnection();
+    const [users] = await connection.query('CALL GetUserList()');
+    res.status(200).json({
+      success: true,
+      message: 'User list successful',
+      result: {
+      arrayUser: users[0],
+      arrayCompany: users[1]
+      }
+    });
+  } catch (err) {
+    console.error('Error en la consulta:', err);
+    res.status(500).json({ success: false, message: 'User list errors', error: err.message });
+  } finally {
+    if (connection) connection.release();
+  }
+};
+
+exports.userRegister = async (req, res) => {
+  console.log('en userRegister ***');
+  let connection;
+  try {
+    const { full_name, email, username, id_company, password, id_user } = req.body;
+    if (!req.body.id_user) {
+      req.body.id_user = null;
+    }
+    
+    const [name, last_name] = full_name.split(' ');
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array()[0].msg });
+    }
+
+    connection = await db.getConnection();
+    let hashedPassword = null;
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      hashedPassword = await bcrypt.hash(password, salt);
+    }
+    
+    const [result] = await connection.query(
+      'CALL RegisterOrEditUser(?, ?, ?, ?, ?, ?, ?)',
+      [name, last_name, email, username, id_company, hashedPassword, id_user]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: id_user ? 'User updated successfully' : 'User registered successfully',
+      result: result[0]
+    });
+  } catch (err) {
+    console.error('Error al registrar o editar usuario:', err);
+    res.status(500).json({ message: 'Error al registrar o editar usuario' });
+  } finally {
+    if (connection) connection.release(); // Liberar conexión
+  }
 };
