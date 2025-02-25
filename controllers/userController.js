@@ -62,27 +62,13 @@ exports.loginUser = async (req, res) => {
       return res.status(400).json({ errors: errors.array()[0].msg });
     }
 
-    
     const { username, password } = req.body;
     // Conectar a la base de datos
     connection = await db.getConnection();
-    const [rows] = await connection.query(
-      `SELECT 
-        id_user
-        , CONCAT(name, \' \', last_name) AS full_name
-        , id_role, is_password
-        , is_active
-        , password
-        , username 
-      FROM 
-        users 
-      WHERE 
-      username = ?`,
-      [username]
-    );
+    const [rows] = await connection.query('CALL GetUserByUsername(?)', [username]);
   
-    if (rows.length === 0) return res.status(404).json({ message: 'User not found' });
-    const user = rows[0];
+    if (rows[0].length === 0) return res.status(404).json({ message: 'User not found' });
+    const user = rows[0][0];
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) return res.status(401).json({ message: 'Password incorrect' });
     if (user.is_active === 0) return res.status(401).json({ message: 'User inactive' });
@@ -90,11 +76,11 @@ exports.loginUser = async (req, res) => {
     // Crear y enviar token JWT
     const token = jwt.sign(
       { 
-        id_user: user.id_user
-        ,id_role: user.id_role 
-        ,username: user.username 
-        ,full_name: user.full_name 
-        ,is_password: user.is_password 
+        id_user: user.id_user,
+        id_role: user.id_role,
+        username: user.username,
+        full_name: user.full_name,
+        is_password: user.is_password 
       }, 
       process.env.JWT_SECRET, 
       { 
@@ -102,12 +88,12 @@ exports.loginUser = async (req, res) => {
       }
     );
 
-    res.cookie(`token`, token, {
+    res.cookie('token', token, {
       httpOnly: true, // Solo accesible a través de HTTP
       secure: true, // Solo en HTTPS en producción
       maxAge: one_hour_interval, // 1 hora en milisegundos
       sameSite: 'None', // Para proteger contra CSRF
-    })
+    });
 
     const currentTime = moment(); // Fecha y hora actual
     const expirationTime = currentTime.clone().add(one_hour_interval, 'milliseconds'); // Sumar expiresIntervalMs
@@ -117,8 +103,8 @@ exports.loginUser = async (req, res) => {
         success: true,
         message: 'Login successful',
         result: {
-          'userName':user.full_name
-          ,'expirationTime': expirationTime.format("YYYY-MM-DD HH:mm:ss")
+          userName: user.full_name,
+          expirationTime: expirationTime.format("YYYY-MM-DD HH:mm:ss")
         },
       }
     );
@@ -294,6 +280,46 @@ exports.userRegister = async (req, res) => {
   } catch (err) {
     console.error('Error al registrar o editar usuario:', err);
     res.status(500).json({ message: 'Error al registrar o editar usuario' });
+  } finally {
+    if (connection) connection.release(); // Liberar conexión
+  }
+};
+
+exports.toggleUserStatus = async (req, res) => {
+  console.log('en toggleUserStatus ***');
+  const token = req.cookies.token; 
+
+  if (isTokenRevoked(token)) { 
+    return res.status(401).json({ 
+      success: false,
+      message: "Token is revoked." 
+    });
+  }
+
+  const { id_user } = req.params;
+  const { is_active } = req.body;
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array()[0].msg });
+  }
+
+  let connection;
+  try {
+    connection = await db.getConnection();
+    const [result] = await connection.query('CALL ToggleUserStatus(?, ?)', [id_user, is_active]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'User status updated successfully'
+    });
+  } catch (err) {
+    console.error('Error al actualizar el estado del usuario:', err);
+    res.status(500).json({ message: 'Error al actualizar el estado del usuario' });
   } finally {
     if (connection) connection.release(); // Liberar conexión
   }

@@ -1,27 +1,11 @@
 const express = require('express');
 const { body, param } = require('express-validator');
-const userController = require('../controllers/userController');
+const marketingChannelsController = require('../controllers/marketingChannelsController');
 const { authenticateToken } = require('../middlewares/authMiddleware'); // Importar el middleware
 const router = express.Router();
 
-// Ruta para iniciar sesión (sin token)
-router.post(
-  '/login',
-  [
-    body('username')
-      .isLength({ min: 6 }).withMessage('The user must have a minimum of 6 digits.')
-      .notEmpty().withMessage('User cannot be empty.'),
-    body('password')
-      .exists().withMessage('Password is required.')
-      .notEmpty().withMessage('Password cannot be empty.')
-      .isLength({ min: 6 }).withMessage('The password must have a minimum of 6 digits.'),
-  ],
-  userController.loginUser
-);
-router.post('/logout', authenticateToken, userController.logoutUser);
-router.post('/renew-token', authenticateToken, userController.renewToken);
-router.get('/list', authenticateToken, userController.userList);
-router.post(
+router.get('/list', authenticateToken, marketingChannelsController.marketingChannelsList);
+/*router.post(
   '/register',
   authenticateToken,
   [
@@ -45,19 +29,19 @@ router.post(
       .isNumeric().withMessage('User ID must be a number.'),
   ],
   userController.userRegister
-);
+);*/
 router.put(
-  '/toggle-status/:id_user',
+  '/toggle-status/:id_marketing_channel',
   authenticateToken,
   [
-    param('id_user')
+    param('id_marketing_channel')
       .notEmpty().withMessage('User ID cannot be empty.')
       .isNumeric().withMessage('User ID must be a number.'),
     body('is_active')
       .notEmpty().withMessage('is_active cannot be empty.')
       .isNumeric().withMessage('is_active must be a number.'),
   ],
-  userController.toggleUserStatus
+  marketingChannelsController.toggleMarketingChannelsStatus
 );
 
 module.exports = router;
