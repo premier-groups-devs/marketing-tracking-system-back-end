@@ -5,31 +5,28 @@ const { authenticateToken } = require('../middlewares/authMiddleware'); // Impor
 const router = express.Router();
 
 router.get('/list', authenticateToken, marketingChannelsController.marketingChannelsList);
-/*router.post(
+router.post(
   '/register',
   authenticateToken,
   [
-    body('full_name')
-      .notEmpty().withMessage('Full name cannot be empty.')
-      .isString().withMessage('Full name must be a string.'),
-    body('email')
-      .notEmpty().withMessage('Email cannot be empty.')
-      .isEmail().withMessage('Must be a valid email.'),
-    body('username')
-      .notEmpty().withMessage('Username cannot be empty.')
-      .isString().withMessage('Username must be a string.'),
-    body('id_company')
-      .notEmpty().withMessage('Company ID cannot be empty.')
-      .isNumeric().withMessage('Company ID must be a number.'),
-    body('password')
-      .optional()
-      .isString().withMessage('Password must be a string.'),
-    body('id_user')
-      .optional()
-      .isNumeric().withMessage('User ID must be a number.'),
+    body('source_name')
+      .notEmpty().withMessage('Source name cannot be empty.')
+      .isString().withMessage('Source name must be a string.'),
+    body('cost')
+      .notEmpty().withMessage('Cost cannot be empty.')
+      .isNumeric().withMessage('Cost must be a number.'),
+    body('insert')
+      .notEmpty().withMessage('Insert cannot be empty.')
+      .isNumeric().withMessage('Insert must be a number.'),
+    body('date_create')
+      .notEmpty().withMessage('Date create cannot be empty.')
+      .isDate().withMessage('Date create must be a valid date.'),
+    body('id_city')
+      .notEmpty().withMessage('City ID cannot be empty.')
+      .isNumeric().withMessage('City ID must be a number.'),
   ],
-  userController.userRegister
-);*/
+  marketingChannelsController.MarketingChannelsRegister
+);
 router.put(
   '/toggle-status/:id_marketing_channel',
   authenticateToken,

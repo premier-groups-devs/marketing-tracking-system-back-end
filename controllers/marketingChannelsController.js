@@ -32,7 +32,8 @@ exports.marketingChannelsList = async (req, res) => {
       success: true,
       message: 'Marketing channels list successful',
       result: {
-        arrayMarketingChannel: marketingChannel[0],
+        arrayMarketingChannels: marketingChannel[0],
+        arrayCitys: marketingChannel[1],
       }
     });
   } catch (err) {
@@ -43,16 +44,15 @@ exports.marketingChannelsList = async (req, res) => {
   }
 };
 
-exports.userRegister = async (req, res) => {
-  console.log('en userRegister ***');
+exports.MarketingChannelsRegister = async (req, res) => {
+  console.log('en MarketingChannelsRegister ***');
   let connection;
   try {
-    const { full_name, email, username, id_company, password, id_user } = req.body;
-    if (!req.body.id_user) {
-      req.body.id_user = null;
-    }
+    const { source_name, cost, id, insert, id_city, date_create } = req.body;
     
-    const [name, last_name] = full_name.split(' ');
+    if (!req.body.id) {
+      req.body.id = null;
+    }
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -60,25 +60,19 @@ exports.userRegister = async (req, res) => {
     }
 
     connection = await db.getConnection();
-    let hashedPassword = null;
-    if (password) {
-      const salt = await bcrypt.genSalt(10);
-      hashedPassword = await bcrypt.hash(password, salt);
-    }
-    
     const [result] = await connection.query(
-      'CALL RegisterOrEditUser(?, ?, ?, ?, ?, ?, ?)',
-      [name, last_name, email, username, id_company, hashedPassword, id_user]
+      'CALL RegisterOrEditMarketingChannels(?, ?, ?, ?, ?, ?)',
+      [source_name, cost, id, insert, id_city, date_create]
     );
 
     res.status(200).json({
       success: true,
-      message: id_user ? 'User updated successfully' : 'User registered successfully',
+      message: id ? 'Marketing channels updated successfully' : 'Marketing channels registered successfully',
       result: result[0]
     });
   } catch (err) {
-    console.error('Error al registrar o editar usuario:', err);
-    res.status(500).json({ message: 'Error al registrar o editar usuario' });
+    console.error('Error al registrar o editar marketing channels:', err);
+    res.status(500).json({ message: 'Error al registrar o editar marketing channels' });
   } finally {
     if (connection) connection.release(); // Liberar conexión
   }
@@ -114,7 +108,7 @@ exports.toggleMarketingChannelsStatus = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Marketing channels status updated successfully'
+      message: 'Marketing channels status updated successfully' 
     });
   } catch (err) {
     console.error('Error al actualizar el estado del Marketing channels:', err);
