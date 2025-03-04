@@ -52,19 +52,24 @@ exports.getDashboardData = async (startDate, endDate, citys, invalid) => {
   let connection;
 
   try {
-
     // Inicializa las variables para los estatus
     let arrayChannelMarketing = [];
     let arrayLeadMarketing = [];
     let arrayRevenueMarketing = [];
     let arrayCitys = [];
-    connection = await db.getConnection();    
-    const [results] = await connection.query('CALL GetMarketingDashboardData(?, ?, ?, ?)', [startDate, endDate, citys, invalid]);
+    let lineChartDataPoints = [];
+    connection = await db.getConnection();
 
-    if(results[0].length > 0)
+    // Modificación de la consulta para buscar solo por fecha
+    const query = `
+      CALL GetMarketingDashboardData(?, ?, ?, ?)
+    `;
+    const [results] = await connection.query(query, [startDate, endDate, citys, invalid]);
+
+    if (results[0].length > 0)
       arrayChannelMarketing = results[0];
 
-    if(results[1].length > 0) {
+    if (results[1].length > 0) {
       arrayLeadMarketing = results[1].reduce((acc, item) => {
         const month = item.month; // Asegúrate de que 'month' es la propiedad correcta en tu objeto
         if (!acc[month]) {
@@ -80,9 +85,9 @@ exports.getDashboardData = async (startDate, endDate, citys, invalid) => {
         });
         return acc;
       }, {});
-    }  
+    }
 
-    if(results[2].length > 0) {
+    if (results[2].length > 0) {
       arrayRevenueMarketing = results[2].reduce((acc, item) => {
         const month = item.month; // Asegúrate de que 'month' es la propiedad correcta en tu objeto
         if (!acc[month]) {
@@ -98,16 +103,112 @@ exports.getDashboardData = async (startDate, endDate, citys, invalid) => {
         });
         return acc;
       }, {});
-    }  
-    
-    if(results[3].length > 0) 
+    }
+
+    if (results[3].length > 0)
       arrayCitys = results[3];
 
+    lineChartDataPoints= [
+      {
+        kpi: "Leads",
+        colors_charts: "#FF0000",
+        dataPoints: [
+          {
+            city: "Miami",
+            colors_charts: "#2e0c5b",
+            values: [
+              { monthYear: 'Feb 2024', count: 100 },
+              { monthYear: 'Mar 2024', count: 100 },
+              { monthYear: 'Apr 2024', count: 100 },
+              { monthYear: 'May 2024', count: 100 },
+              { monthYear: 'Jun 2024', count: 100 },
+              { monthYear: 'Jul 2024', count: 100 },
+              { monthYear: 'Aug 2024', count: 100 },
+              { monthYear: 'Sep 2024', count: 100 },
+              { monthYear: 'Oct 2024', count: 100 },
+              { monthYear: 'Nov 2024', count: 100 },
+              { monthYear: 'Dec 2024', count: 100 },
+              { monthYear: 'Jan 2025', count: 100 },
+              { monthYear: 'Feb 2025', count: 90 },
+              { monthYear: 'Mar 2025', count: 90 }
+            ]
+          },
+          {
+            city: "Arlington",
+            colors_charts: "#3fff33",
+            values: [
+              { monthYear: 'Feb 2024', count: 100 },
+              { monthYear: 'Mar 2024', count: 170 },
+              { monthYear: 'Apr 2024', count: 185 },
+              { monthYear: 'May 2024', count: 170 },
+              { monthYear: 'Jun 2024', count: 155 },
+              { monthYear: 'Jul 2024', count: 165 },
+              { monthYear: 'Aug 2024', count: 110 },
+              { monthYear: 'Sep 2024', count: 185 },
+              { monthYear: 'Oct 2024', count: 110 },
+              { monthYear: 'Nov 2024', count: 115 },
+              { monthYear: 'Dec 2024', count: 120 },
+              { monthYear: 'Jan 2025', count: 135 },
+              { monthYear: 'Feb 2025', count: 170 },
+              { monthYear: 'Mar 2025', count: 120 }
+            ]
+          }
+        ]
+      },
+      {
+        kpi: "Apts. Set",
+        colors_charts: "#0000FF",
+        dataPoints: [
+          {
+            city: "Miami",
+            colors_charts: "#2e0c5b",
+            values: [
+              { monthYear: 'Feb 2024', count: 10 },
+              { monthYear: 'Mar 2024', count: 80 },
+              { monthYear: 'Apr 2024', count: 75 },
+              { monthYear: 'May 2024', count: 40 },
+              { monthYear: 'Jun 2024', count: 35 },
+              { monthYear: 'Jul 2024', count: 15 },
+              { monthYear: 'Aug 2024', count: 20 },
+              { monthYear: 'Sep 2024', count: 95 },
+              { monthYear: 'Oct 2024', count: 90 },
+              { monthYear: 'Nov 2024', count: 35 },
+              { monthYear: 'Dec 2024', count: 10 },
+              { monthYear: 'Jan 2025', count: 55 },
+              { monthYear: 'Feb 2025', count: 20 },
+              { monthYear: 'Mar 2025', count: 30 }
+            ]
+          },
+          {
+            city: "Arlington",
+            colors_charts: "#3fff33",
+            values: [
+              { monthYear: 'Feb 2024', count: 90 },
+              { monthYear: 'Mar 2024', count: 10 },
+              { monthYear: 'Apr 2024', count: 65 },
+              { monthYear: 'May 2024', count: 40 },
+              { monthYear: 'Jun 2024', count: 75 },
+              { monthYear: 'Jul 2024', count: 59 },
+              { monthYear: 'Aug 2024', count: 60 },
+              { monthYear: 'Sep 2024', count: 55 },
+              { monthYear: 'Oct 2024', count: 90 },
+              { monthYear: 'Nov 2024', count: 75 },
+              { monthYear: 'Dec 2024', count: 30 },
+              { monthYear: 'Jan 2025', count: 25 },
+              { monthYear: 'Feb 2025', count: 10 },
+              { monthYear: 'Mar 2025', count: 10 }
+            ]
+          }
+        ]
+      }
+    ]
+
     return {
-      arrayChannelMarketing: arrayChannelMarketing
-      , arrayLeadMarketing: arrayLeadMarketing
-      , arrayRevenueMarketing: arrayRevenueMarketing
-      , arrayCitys: arrayCitys
+      arrayChannelMarketing: arrayChannelMarketing,
+      arrayLeadMarketing: arrayLeadMarketing,
+      arrayRevenueMarketing: arrayRevenueMarketing,
+      arrayCitys: arrayCitys,
+      arrayKPIs: lineChartDataPoints
     };
   } catch (error) {
     console.error('Error en la consulta:', error);
