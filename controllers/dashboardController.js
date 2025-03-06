@@ -106,7 +106,6 @@ exports.getDashboardData = async (startDate, endDate, citys, invalid) => {
     if (results[3].length > 0)
       arrayCitys = results[3];
 
-    console.log('results[4]: '+JSON.stringify(results[4]));
     if (results[4].length > 0) {
       lineChartDataPoints = results[4].reduce((acc, item) => {
         const kpi = item.kpi;
