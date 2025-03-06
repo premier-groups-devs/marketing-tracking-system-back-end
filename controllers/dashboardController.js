@@ -61,9 +61,7 @@ exports.getDashboardData = async (startDate, endDate, citys, invalid) => {
     connection = await db.getConnection();
 
     // Modificación de la consulta para buscar solo por fecha
-    const query = `
-      CALL GetMarketingDashboardData(?, ?, ?, ?)
-    `;
+    const query = `CALL MainProcedureMarketing(?, ?, ?, ?)`;
     const [results] = await connection.query(query, [startDate, endDate, citys, invalid]);
 
     if (results[0].length > 0)
@@ -108,100 +106,40 @@ exports.getDashboardData = async (startDate, endDate, citys, invalid) => {
     if (results[3].length > 0)
       arrayCitys = results[3];
 
-    lineChartDataPoints= [
-      {
-        kpi: "Leads",
-        colors_charts: "#FF0000",
-        dataPoints: [
-          {
-            city: "Miami",
-            colors_charts: "#2e0c5b",
-            values: [
-              { monthYear: 'Feb 2024', count: 100 },
-              { monthYear: 'Mar 2024', count: 100 },
-              { monthYear: 'Apr 2024', count: 100 },
-              { monthYear: 'May 2024', count: 100 },
-              { monthYear: 'Jun 2024', count: 100 },
-              { monthYear: 'Jul 2024', count: 100 },
-              { monthYear: 'Aug 2024', count: 100 },
-              { monthYear: 'Sep 2024', count: 100 },
-              { monthYear: 'Oct 2024', count: 100 },
-              { monthYear: 'Nov 2024', count: 100 },
-              { monthYear: 'Dec 2024', count: 100 },
-              { monthYear: 'Jan 2025', count: 100 },
-              { monthYear: 'Feb 2025', count: 90 },
-              { monthYear: 'Mar 2025', count: 90 }
-            ]
-          },
-          {
-            city: "Arlington",
-            colors_charts: "#3fff33",
-            values: [
-              { monthYear: 'Feb 2024', count: 100 },
-              { monthYear: 'Mar 2024', count: 170 },
-              { monthYear: 'Apr 2024', count: 185 },
-              { monthYear: 'May 2024', count: 170 },
-              { monthYear: 'Jun 2024', count: 155 },
-              { monthYear: 'Jul 2024', count: 165 },
-              { monthYear: 'Aug 2024', count: 110 },
-              { monthYear: 'Sep 2024', count: 185 },
-              { monthYear: 'Oct 2024', count: 110 },
-              { monthYear: 'Nov 2024', count: 115 },
-              { monthYear: 'Dec 2024', count: 120 },
-              { monthYear: 'Jan 2025', count: 135 },
-              { monthYear: 'Feb 2025', count: 170 },
-              { monthYear: 'Mar 2025', count: 120 }
-            ]
-          }
-        ]
-      },
-      {
-        kpi: "Apts. Set",
-        colors_charts: "#0000FF",
-        dataPoints: [
-          {
-            city: "Miami",
-            colors_charts: "#2e0c5b",
-            values: [
-              { monthYear: 'Feb 2024', count: 10 },
-              { monthYear: 'Mar 2024', count: 80 },
-              { monthYear: 'Apr 2024', count: 75 },
-              { monthYear: 'May 2024', count: 40 },
-              { monthYear: 'Jun 2024', count: 35 },
-              { monthYear: 'Jul 2024', count: 15 },
-              { monthYear: 'Aug 2024', count: 20 },
-              { monthYear: 'Sep 2024', count: 95 },
-              { monthYear: 'Oct 2024', count: 90 },
-              { monthYear: 'Nov 2024', count: 35 },
-              { monthYear: 'Dec 2024', count: 10 },
-              { monthYear: 'Jan 2025', count: 55 },
-              { monthYear: 'Feb 2025', count: 20 },
-              { monthYear: 'Mar 2025', count: 30 }
-            ]
-          },
-          {
-            city: "Arlington",
-            colors_charts: "#3fff33",
-            values: [
-              { monthYear: 'Feb 2024', count: 90 },
-              { monthYear: 'Mar 2024', count: 10 },
-              { monthYear: 'Apr 2024', count: 65 },
-              { monthYear: 'May 2024', count: 40 },
-              { monthYear: 'Jun 2024', count: 75 },
-              { monthYear: 'Jul 2024', count: 59 },
-              { monthYear: 'Aug 2024', count: 60 },
-              { monthYear: 'Sep 2024', count: 55 },
-              { monthYear: 'Oct 2024', count: 90 },
-              { monthYear: 'Nov 2024', count: 75 },
-              { monthYear: 'Dec 2024', count: 30 },
-              { monthYear: 'Jan 2025', count: 25 },
-              { monthYear: 'Feb 2025', count: 10 },
-              { monthYear: 'Mar 2025', count: 10 }
-            ]
-          }
-        ]
-      }
-    ]
+    console.log('results[4]: '+JSON.stringify(results[4]));
+    if (results[4].length > 0) {
+      lineChartDataPoints = results[4].reduce((acc, item) => {
+        const kpi = item.kpi;
+        const city = item.city;
+        const monthYear = item.month_year;
+        const count = item.total_count;
+        const colors_charts = item.kpi_colors_charts;
+        const city_colors_charts = item.city_colors_charts;
+
+        let kpiData = acc.find(data => data.kpi === kpi);
+        if (!kpiData) {
+          kpiData = {
+            kpi: kpi,
+            colors_charts: colors_charts,
+            dataPoints: []
+          };
+          acc.push(kpiData);
+        }
+
+        let cityData = kpiData.dataPoints.find(data => data.city === city);
+        if (!cityData) {
+          cityData = {
+            city: city,
+            colors_charts: city_colors_charts,
+            values: []
+          };
+          kpiData.dataPoints.push(cityData);
+        }
+
+        cityData.values.push({ monthYear, count });
+        return acc;
+      }, []);
+    }
 
     return {
       arrayChannelMarketing: arrayChannelMarketing,
