@@ -110,6 +110,7 @@ exports.getDashboardData = async (startDate, endDate, citys, invalid) => {
       lineChartDataPoints = results[4].reduce((acc, item) => {
         const kpi = item.kpi;
         const city = item.city;
+        const kpi_id = item.kpi_id;
         const monthYear = item.month_year;
         const count = item.total_count;
         const colors_charts = item.kpi_colors_charts;
@@ -119,6 +120,7 @@ exports.getDashboardData = async (startDate, endDate, citys, invalid) => {
         if (!kpiData) {
           kpiData = {
             kpi: kpi,
+            kpi_id: item.kpi_id,
             colors_charts: colors_charts,
             dataPoints: []
           };
