@@ -34,6 +34,7 @@ exports.marketingChannelsList = async (req, res) => {
       result: {
         arrayMarketingChannels: marketingChannel[0],
         arrayCitys: marketingChannel[1],
+        arrayServiceRequired: marketingChannel[2],
       }
     });
   } catch (err) {
@@ -48,7 +49,7 @@ exports.MarketingChannelsRegister = async (req, res) => {
   console.log('en MarketingChannelsRegister ***');
   let connection;
   try {
-    const { source_name, cost, id, insert, id_city, date_create } = req.body;
+    const { source_name, cost, id, insert, id_city, id_service, date_create } = req.body;
     
     if (!req.body.id) {
       req.body.id = null;
@@ -61,8 +62,8 @@ exports.MarketingChannelsRegister = async (req, res) => {
 
     connection = await db.getConnection();
     const [result] = await connection.query(
-      'CALL RegisterOrEditMarketingChannels(?, ?, ?, ?, ?, ?)',
-      [source_name, cost, id, insert, id_city, date_create]
+      'CALL RegisterOrEditMarketingChannels(?, ?, ?, ?, ?, ?, ?)',
+      [source_name, cost, id, insert, id_city, id_service, date_create]
     );
 
     res.status(200).json({
