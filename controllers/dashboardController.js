@@ -30,8 +30,7 @@ exports.dashboard = async (req, res) => {
 
   try {
     const dashboardData = await exports.getDashboardData(req.query.startDate, req.query.endDate, req.query.citys, req.query.invalid);
-    //console.log('Imprimiendo: '+JSON.stringify(dashboardData))
-
+    
     return res.status(200).json({
       success: true,
       message: 'Dashboard successful',
@@ -235,6 +234,7 @@ exports.hasDataChanged = async (newData) => {
   }
   
   const dataChanged = JSON.stringify(previousData) !== JSON.stringify(newData);
+ 
   if (dataChanged) {
     console.log('Datos cambiaron');
     return true;
@@ -255,8 +255,8 @@ exports.startDashboardMonitor = async () => {
       const invalid = 0;
     
       const newData = await exports.getDashboardData(startDate, endDate, citys, invalid);
-      if (await exports.hasDataChanged(newData)) {
-        previousData = newData;
+      if (await exports.hasDataChanged(newData.arrayChannelMarketing)) {
+        previousData = newData.arrayChannelMarketing;
         broadcastDashboard({ message: true });
       }
     } catch (error) {
