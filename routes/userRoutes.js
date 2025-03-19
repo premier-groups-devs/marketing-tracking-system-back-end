@@ -1,10 +1,9 @@
 const express = require('express');
 const { body, param } = require('express-validator');
 const userController = require('../controllers/userController');
-const { authenticateToken } = require('../middlewares/authMiddleware'); // Importar el middleware
+const { authenticateToken } = require('../middlewares/authMiddleware'); 
 const router = express.Router();
 
-// Ruta para iniciar sesión (sin token)
 router.post(
   '/login',
   [

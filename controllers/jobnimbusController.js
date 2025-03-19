@@ -165,8 +165,7 @@ async function postSaveContacts(contactDataArray) {
 
             // Convert date_created from ISO timestamp to DATETIME format and save it in date_create
             if (filteredContactData.date_created) {
-                const date = new Date(filteredContactData.date_created * 1000);
-                filteredContactData.date_create = date.toISOString().slice(0, 19).replace('T', ' ');
+                filteredContactData.date_create = convertToDatetime(filteredContactData.date_created, -5); // Adjust for UTC-5
             }
 
             const checkQuery = `
@@ -282,9 +281,9 @@ exports.updateProjects = async () => {
     isUpdatingProjects = true;
     try {
         let connection = await db.getConnection();
-        const excludedStatuses = ['Invalid', 'Unresponsive', 'Lost Sales'];
+        const excludedStatuses = ['Invalids', 'Unresponsives', 'Lost Saless'];
         const query = `
-            SELECT jnid, status_name, id 
+            SELECT jnid, status_name, id, date_created  
             FROM jobnimbus_contacts 
             WHERE status_name NOT IN (?, ?, ?)
             AND YEAR(date_create) >= ?
@@ -293,7 +292,7 @@ exports.updateProjects = async () => {
         connection.release();
 
         const updateContact = async (contact) => {
-            const { jnid, status_name: currentStatus, id } = contact;
+            const { jnid, status_name: currentStatus, id, date_created } = contact;
 
             try {
                 const response = await jobNimbusAPI.get(`/contacts/${jnid}`);
@@ -326,7 +325,7 @@ exports.updateProjects = async () => {
                     result.status_name = 'Demo Valid';
                 }
 
-                if (result && result.status_name && !historicalCheckResult.some(record => record.status_name === result.status_name)) {
+                //if (result && result.status_name && !historicalCheckResult.some(record => record.status_name === result.status_name)) {
                     console.log(`Actualizando status_name para jnid: ${jnid}`);
 
                     const updateColumns = [];
@@ -354,13 +353,16 @@ exports.updateProjects = async () => {
                     if (updateColumns.length > 0) {
                         //console.log('\x1b[33m%s\x1b[0m', 'Insert: ' + JSON.stringify(updateColumns));
                         //console.log('\x1b[32m%s\x1b[0m', 'Into: ' + JSON.stringify(updateValues));
-                        
+
+                        // Convert date_created from ISO timestamp to DATETIME format and save it in date_create
                         const updateQuery = `
                             UPDATE jobnimbus_contacts 
-                            SET ${updateColumns.join(', ')}, date_updated = NOW()
+                            SET ${updateColumns.join(', ')}, date_updated = ?, date_create = ?
                             WHERE jnid = ?
                         `;
-                        updateValues.push(jnid);
+                        const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+                        const adjustedDateCreate = date_created ? convertToDatetime(date_created, -5) : null; // Adjust for UTC-5
+                        updateValues.push(currentDate, adjustedDateCreate, jnid);
 
                         connection = await db.getConnection();
                         await connection.execute(updateQuery, updateValues);
@@ -372,11 +374,12 @@ exports.updateProjects = async () => {
                         INSERT INTO jobnimbus_contacts_status_historicals (id_jobnimbus_contacts, status_name, date_create)
                         VALUES (?, ?, NOW())
                     `;
+                    
                     await connection.execute(historicalQuery, [id, result.status_name || 'Unknown']);
                     connection.release();
-                } else {
+                /*} else {
                     console.log(`No se necesita actualizar el contacto con jnid ${jnid}`);
-                }
+                }*/
             } catch (error) {
                 console.error(`Error al actualizar el contacto con jnid ${jnid}:`, error.response ? error.response.data : error.message);
                 logError(`Error al actualizar el contacto con jnid ${jnid}: ${error.response ? error.response.data : error.message}`);
@@ -390,5 +393,18 @@ exports.updateProjects = async () => {
     } finally {
         isUpdatingProjects = false;
     }
+};
+
+/**
+ * Converts a UNIX timestamp to a DATETIME string in a specific timezone.
+ * @param {number} unixTimestamp - The UNIX timestamp in seconds.
+ * @param {number} offsetHours - The timezone offset in hours (e.g., -5 for UTC-5).
+ * @returns {string} - The formatted DATETIME string.
+ */
+const convertToDatetime = (unixTimestamp, offsetHours = 0) => {
+    const timestamp = unixTimestamp * 1000; // Convert seconds to milliseconds
+    const dateUTC = new Date(timestamp); // Create UTC date
+    const adjustedDate = new Date(dateUTC.getTime() + offsetHours * 3600 * 1000); // Adjust for timezone
+    return adjustedDate.toISOString().slice(0, 19).replace('T', ' ');
 };
 
