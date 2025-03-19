@@ -16,9 +16,9 @@ module.exports = router;
 
 if (!isNaN(one_hour_interval)) {
     setInterval(() => {
-       // jobnimbusController.getContactsInterval('m3j7sg8dy3hkb13ej5obpbc','');
+        jobnimbusController.getContactsInterval('m3j7sg8dy3hkb13ej5obpbc','');
         jobnimbusController.updateProjects();
-    }, 1000); 
+    }, one_hour_interval/*five_minute_interval*/); 
 } else {
     console.error('INTJOBNIMBUS no está configurado correctamente en el archivo .env');
 }

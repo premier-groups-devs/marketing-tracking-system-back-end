@@ -281,7 +281,7 @@ exports.updateProjects = async () => {
     isUpdatingProjects = true;
     try {
         let connection = await db.getConnection();
-        const excludedStatuses = ['Invalids', 'Unresponsives', 'Lost Saless'];
+        const excludedStatuses = ['Invalid', 'Unresponsive', 'Lost Sales'];
         const query = `
             SELECT jnid, status_name, id, date_created  
             FROM jobnimbus_contacts 
@@ -325,7 +325,7 @@ exports.updateProjects = async () => {
                     result.status_name = 'Demo Valid';
                 }
 
-                //if (result && result.status_name && !historicalCheckResult.some(record => record.status_name === result.status_name)) {
+                if (result && result.status_name && !historicalCheckResult.some(record => record.status_name === result.status_name)) {
                     console.log(`Actualizando status_name para jnid: ${jnid}`);
 
                     const updateColumns = [];
@@ -357,7 +357,7 @@ exports.updateProjects = async () => {
                         // Convert date_created from ISO timestamp to DATETIME format and save it in date_create
                         const updateQuery = `
                             UPDATE jobnimbus_contacts 
-                            SET ${updateColumns.join(', ')}, date_updated = ?, date_create = ?
+                            SET ${updateColumns.join(', ')}, date_update = ?, date_create = ?
                             WHERE jnid = ?
                         `;
                         const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -377,9 +377,9 @@ exports.updateProjects = async () => {
                     
                     await connection.execute(historicalQuery, [id, result.status_name || 'Unknown']);
                     connection.release();
-                /*} else {
+                } else {
                     console.log(`No se necesita actualizar el contacto con jnid ${jnid}`);
-                }*/
+                }
             } catch (error) {
                 console.error(`Error al actualizar el contacto con jnid ${jnid}:`, error.response ? error.response.data : error.message);
                 logError(`Error al actualizar el contacto con jnid ${jnid}: ${error.response ? error.response.data : error.message}`);
