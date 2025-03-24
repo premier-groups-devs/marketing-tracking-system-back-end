@@ -1,6 +1,7 @@
 require('dotenv').config();
 const db = require('../models/db');
 const axios = require('axios');
+const { Console } = require('console');
 const fs = require('fs');
 const path = require('path');
 
@@ -66,10 +67,10 @@ const allowedColumns = [
     , 'cf_double_19'
     , 'cf_double_8'
     , 'cf_string_15'
-    , 'cf_double_5'
-    , 'cf_string_61'
-    , 'cf_boolean_11'
-    , 'cf_date_7'  
+    , 'cf_double_5' // Valida monto de Signed Contract
+    , 'cf_string_61' //Service Required
+    , 'cf_boolean_11' //Valida Appointment Set
+    , 'cf_date_7'  //Valida Demo Valid
 ];
 
 const logFilePath = path.join(__dirname, '../../logs/error.log');
@@ -131,7 +132,6 @@ exports.getContactsInterval = async (jnid, manualStartDate = null) => {
 
 async function postSaveContacts(contactDataArray) {
     console.log('en postSaveContacts ***');
-
     let connection;
     
     if (!Array.isArray(contactDataArray) || contactDataArray.length === 0) {
@@ -161,8 +161,10 @@ async function postSaveContacts(contactDataArray) {
             if (!filteredContactData.source_name || !filteredContactData.status_name || !filteredContactData.location) {
                 console.log('source_name, status_name o location son nulos o vacíos. No se guardará el contacto.');
                 continue;
+            } else {
+                await validateInsertContactFiel(connection, filteredContactData.source_name, filteredContactData.location, filteredContactData.cf_string_61);
             }
-
+          
             // Convert date_created from ISO timestamp to DATETIME format and save it in date_create
             if (filteredContactData.date_created) {
                 filteredContactData.date_create = convertToDatetime(filteredContactData.date_created, -5); // Adjust for UTC-5
@@ -287,8 +289,9 @@ exports.updateProjects = async () => {
             FROM jobnimbus_contacts 
             WHERE status_name NOT IN (?, ?, ?)
             AND YEAR(date_create) >= ?
+            AND is_active = ?
         `;
-        const [contacts] = await connection.execute(query, [...excludedStatuses, new Date().getFullYear()]);
+        const [contacts] = await connection.execute(query, [...excludedStatuses, new Date().getFullYear(), 1]);
         connection.release();
 
         const updateContact = async (contact) => {
@@ -381,8 +384,13 @@ exports.updateProjects = async () => {
                     console.log(`No se necesita actualizar el contacto con jnid ${jnid}`);
                 }
             } catch (error) {
-                console.error(`Error al actualizar el contacto con jnid ${jnid}:`, error.response ? error.response.data : error.message);
-                logError(`Error al actualizar el contacto con jnid ${jnid}: ${error.response ? error.response.data : error.message}`);
+                if (error.response && error.response.data === 'Not Found') {
+                    console.log(`El contacto con jnid ${jnid} no se encontró. Marcándolo como inactivo.`);
+                    await updateContactIsActive(connection, jnid);
+                } else {
+                    console.error(`Error al actualizar el contacto con jnid ${jnid}:`, error.response ? error.response.data : error.message);
+                    logError(`Error al actualizar el contacto con jnid ${jnid}: ${error.response ? error.response.data : error.message}`);
+                }
             }
         };
 
@@ -408,3 +416,25 @@ const convertToDatetime = (unixTimestamp, offsetHours = 0) => {
     return adjustedDate.toISOString().slice(0, 19).replace('T', ' ');
 };
 
+async function validateInsertContactFiel(connection, sourceName, id_location_jobnimbus, serviceRequired) {
+    try {
+        const idLocation = typeof id_location_jobnimbus === 'object' && id_location_jobnimbus !== null && 'id' in id_location_jobnimbus
+            ? id_location_jobnimbus.id
+            : id_location_jobnimbus;
+
+        const [rows] = await connection.execute('CALL validateInsertContactFiel(?, ?, ?)', [sourceName, idLocation, serviceRequired]);
+    } catch (error) {
+        console.error('Error al validar o insertar source_name o location:', error.message);
+        throw error;
+    }
+}
+
+const updateContactIsActive = async (connection, jnid) => {
+    try {
+        const [rows] = await connection.execute('CALL updateContactIsActive(?)', [jnid]);
+        console.log(`El contacto con jnid ${jnid} se marcó como inactivo (is_active = 0) usando el procedimiento almacenado.`);
+    } catch (error) {
+        console.error(`Error al actualizar is_active para el contacto con jnid ${jnid}:`, error.message);
+        logError(`Error al actualizar is_active para el contacto con jnid ${jnid}: ${error.message}`);
+    }
+};
