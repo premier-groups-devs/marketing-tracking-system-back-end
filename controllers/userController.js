@@ -62,16 +62,16 @@ exports.loginUser = async (req, res) => {
       return res.status(400).json({ errors: errors.array()[0].msg });
     }
 
-    const { username, password } = req.body;
+    const { email, password } = req.body;
     // Conectar a la base de datos
     connection = await db.getConnection();
-    const [rows] = await connection.query('CALL GetUserByUsername(?)', [username]);
+    const [rows] = await connection.query('CALL GetUserByUsername(?)', [email]);
   
-    if (rows[0].length === 0) return res.status(404).json({ message: 'User not found' });
+    if (rows[0].length === 0) return res.status(404).json({ message: 'Email not found' });
     const user = rows[0][0];
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) return res.status(401).json({ message: 'Password incorrect' });
-    if (user.is_active === 0) return res.status(401).json({ message: 'User inactive' });
+    if (user.is_active === 0) return res.status(401).json({ message: 'Email inactive' });
 
     // Crear y enviar token JWT
     const token = jwt.sign(
@@ -124,36 +124,18 @@ exports.loginUser = async (req, res) => {
 
 exports.logoutUser = (req, res) => {
   console.log('en logoutUser ***');  
-  const token = req.cookies.token; 
-  
-  if (isTokenRevoked(token)) { 
-    return res.status(401).json({ 
-      success: false,
-      message: "Token is revoked." 
-    });
-  }
 
-  if (token) {
-    // Almacena el token con la hora actual
-    revokedTokens.set(token, Date.now()); 
+  // Limpiar la cookie del cliente
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: true, // Usar `true` en producción si usas HTTPS
+    sameSite: "None"
+  });
 
-    // Limpiar la cookie del cliente
-    res.clearCookie("token", {
-      httpOnly: true,
-      secure: true, // Usar `true` en producción si usas HTTPS
-      sameSite: "None"
-    });
-
-    return res.status(200).json({ 
-      success: true,
-      message: "Session completed successfully." 
-    });
-  } else {
-    return res.status(400).json({ 
-      success: false,
-      message: "Token not found in cookie." 
-    });
-  }
+  return res.status(200).json({ 
+    success: true,
+    message: "Session completed successfully." 
+  });
 };
 
 exports.renewToken = (req, res) => {

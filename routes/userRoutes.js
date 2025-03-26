@@ -7,9 +7,9 @@ const router = express.Router();
 router.post(
   '/login',
   [
-    body('username')
-      .isLength({ min: 6 }).withMessage('The user must have a minimum of 6 digits.')
-      .notEmpty().withMessage('User cannot be empty.'),
+    body('email')
+      .notEmpty().withMessage('Email cannot be empty.')
+      .isEmail().withMessage('Must be a valid email.'),
     body('password')
       .exists().withMessage('Password is required.')
       .notEmpty().withMessage('Password cannot be empty.')
@@ -17,7 +17,7 @@ router.post(
   ],
   userController.loginUser
 );
-router.post('/logout', authenticateToken, userController.logoutUser);
+router.post('/logout', userController.logoutUser);
 router.post('/renew-token', authenticateToken, userController.renewToken);
 router.get('/list', authenticateToken, userController.userList);
 router.post(
