@@ -157,12 +157,12 @@ async function postSaveContacts(contactDataArray) {
                 return obj;
             }, {});
 
-            // Validar que source_name, status_name y location no sean nulos o vacíos
-            if (!filteredContactData.source_name || !filteredContactData.status_name || !filteredContactData.location) {
-                console.log('source_name, status_name o location son nulos o vacíos. No se guardará el contacto.');
+            // Validar que source_name, status_name y (location o state_text) no sean nulos o vacíos
+            if (!filteredContactData.source_name || !filteredContactData.status_name || !filteredContactData.location || !filteredContactData.state_text) {
+                console.log('source_name, status_name o (location o state_text) son nulos o vacíos. No se guardará el contacto.'+filteredContactData.source_name+'-'+filteredContactData.jnid);
                 continue;
             } else {
-                await validateInsertContactFiel(connection, filteredContactData.source_name, filteredContactData.location, filteredContactData.cf_string_61);
+                await validateInsertContactFiel(connection, filteredContactData.source_name, filteredContactData.location, filteredContactData.cf_string_61, filteredContactData.state_text);
             }
           
             // Convert date_created from ISO timestamp to DATETIME format and save it in date_create
@@ -416,13 +416,13 @@ const convertToDatetime = (unixTimestamp, offsetHours = 0) => {
     return adjustedDate.toISOString().slice(0, 19).replace('T', ' ');
 };
 
-async function validateInsertContactFiel(connection, sourceName, id_location_jobnimbus, serviceRequired) {
+async function validateInsertContactFiel(connection, sourceName, id_location_jobnimbus, serviceRequired, stateText) {
     try {
         const idLocation = typeof id_location_jobnimbus === 'object' && id_location_jobnimbus !== null && 'id' in id_location_jobnimbus
             ? id_location_jobnimbus.id
             : id_location_jobnimbus;
-
-        const [rows] = await connection.execute('CALL validateInsertContactFiel(?, ?, ?)', [sourceName, idLocation, serviceRequired]);
+   
+        const [rows] = await connection.execute('CALL validateInsertContactFiel(?, ?, ?, ?)', [sourceName, idLocation, serviceRequired, stateText]);
     } catch (error) {
         console.error('Error al validar o insertar source_name o location:', error.message);
         throw error;
@@ -438,3 +438,4 @@ const updateContactIsActive = async (connection, jnid) => {
         logError(`Error al actualizar is_active para el contacto con jnid ${jnid}: ${error.message}`);
     }
 };
+
