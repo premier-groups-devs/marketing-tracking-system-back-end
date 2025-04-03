@@ -163,13 +163,14 @@ async function postSaveContacts(contactDataArray) {
                 continue;
             } else {
                 await validateInsertContactFiel(connection, filteredContactData.source_name, filteredContactData.location, filteredContactData.cf_string_61);
+                filteredContactData.id_company = await getAdjustedIdCompany(connection, filteredContactData.source_name);
             }
-          
+            
             // Convert date_created from ISO timestamp to DATETIME format and save it in date_create
             if (filteredContactData.date_created) {
                 filteredContactData.date_create = convertToDatetime(filteredContactData.date_created, -5); // Adjust for UTC-5
             }
-
+            
             const checkQuery = `
                 SELECT id
                 FROM jobnimbus_contacts 
@@ -219,6 +220,12 @@ async function postSaveContacts(contactDataArray) {
                 if (!columns.includes('status_name')) {
                     columns.push('status_name');
                     values.push(filteredContactData.status_name || 'Unknown');
+                }
+
+                // Ensure id_company is included
+                if (!columns.includes('id_company')) {
+                    columns.push('id_company');
+                    values.push(filteredContactData.id_company || 0);
                 }
 
                 const placeholders = columns.map(() => '?').join(', ');
@@ -403,6 +410,60 @@ exports.updateProjects = async () => {
     }
 };
 
+exports.updateExistingContactsIdCompany = async () => {
+    console.log('Iniciando la actualización de id_company para registros existentes...');
+    let connection;
+
+    try {
+        connection = await db.getConnection();
+
+        // Obtener todos los registros existentes en jobnimbus_contacts
+        const [contacts] = await connection.execute(`
+            SELECT id, source_name
+            FROM jobnimbus_contacts
+            WHERE id_company IS NULL OR id_company = 0
+        `);
+
+        if (contacts.length === 0) {
+            console.log('No hay registros pendientes de actualizar.');
+            return;
+        }
+
+        for (const contact of contacts) {
+            const { id, source_name } = contact;
+
+            if (!source_name) {
+                console.log(`El contacto con ID ${id} no tiene source_name. Saltando...`);
+                continue;
+            }
+
+            try {
+                // Llamar al procedimiento almacenado para ajustar el id_company
+                const adjustedIdCompany = await getAdjustedIdCompany(connection, source_name);
+               
+                // Actualizar el registro con el id_company ajustado
+                await connection.execute(`
+                    UPDATE jobnimbus_contacts
+                    SET id_company = ?
+                    WHERE id = ?
+                `, [adjustedIdCompany, id]);
+
+                console.log(`Registro con ID ${id} actualizado con id_company = ${adjustedIdCompany}`);
+            } catch (error) {
+                console.error(`Error al ajustar id_company para el contacto con ID ${id}:`, error.message);
+                logError(`Error al ajustar id_company para el contacto con ID ${id}: ${error.message}`);
+            }
+        }
+
+        console.log('Actualización de id_company completada.');
+    } catch (error) {
+        console.error('Error al actualizar id_company para registros existentes:', error.message);
+        logError(`Error al actualizar id_company para registros existentes: ${error.message}`);
+    } finally {
+        if (connection) connection.release();
+    }
+};
+
 /**
  * Converts a UNIX timestamp to a DATETIME string in a specific timezone.
  * @param {number} unixTimestamp - The UNIX timestamp in seconds.
@@ -438,3 +499,23 @@ const updateContactIsActive = async (connection, jnid) => {
         logError(`Error al actualizar is_active para el contacto con jnid ${jnid}: ${error.message}`);
     }
 };
+
+const getAdjustedIdCompany = async (connection, source_name) => {
+    try {
+        const [result] = await connection.execute(`
+            CALL adjust_id_company(?, @adjusted_id_company)
+        `, [source_name]);
+
+        // Obtener el valor ajustado de id_company
+        const [adjustedResult] = await connection.execute(`
+            SELECT @adjusted_id_company AS id_company
+        `);
+        return adjustedResult[0].id_company;
+    } catch (error) {
+        console.error(`Error al ajustar id_company para source_name ${source_name}:`, error.message);
+        logError(`Error al ajustar id_company para source_name ${source_name}: ${error.message}`);
+        throw error;
+    }
+};
+
+
