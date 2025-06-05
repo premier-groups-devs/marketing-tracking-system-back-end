@@ -130,6 +130,7 @@ exports.getContactsInterval = async (jnid, manualStartDate = null) => {
     }
 };
 
+//TODO filtrar usuarios validos de jobnimbus en los procedimientos de mysql (no QA, no Test, with lead source)
 async function postSaveContacts(contactDataArray) {
     console.log('en postSaveContacts ***');
     let connection;
@@ -199,6 +200,8 @@ async function postSaveContacts(contactDataArray) {
                         } else if (value === null && key.startsWith('cf_boolean_')) {
                             value = 0; // Convertir null a 0 para columnas booleanas
                         }
+
+                        //TODO valores 'null' en campos de jobnimbus_contacts
 
                         // Asegurar que los valores nulos no se pasen como 'null' (cadena)
                         if (value === null) {
