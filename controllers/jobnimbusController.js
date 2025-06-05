@@ -1,6 +1,7 @@
 require('dotenv').config();
 const db = require('../models/db');
 const axios = require('axios');
+const { Console } = require('console');
 const fs = require('fs');
 const path = require('path');
 
@@ -66,10 +67,10 @@ const allowedColumns = [
     , 'cf_double_19'
     , 'cf_double_8'
     , 'cf_string_15'
-    , 'cf_double_5'
-    , 'cf_string_61'
-    , 'cf_boolean_11'
-    , 'cf_date_7'  
+    , 'cf_double_5' // Valida monto de Signed Contract
+    , 'cf_string_61' //Service Required
+    , 'cf_boolean_11' //Valida Appointment Set
+    , 'cf_date_7'  //Valida Demo Valid
 ];
 
 const logFilePath = path.join(__dirname, '../../logs/error.log');
@@ -129,9 +130,9 @@ exports.getContactsInterval = async (jnid, manualStartDate = null) => {
     }
 };
 
+//TODO filtrar usuarios validos de jobnimbus en los procedimientos de mysql (no QA, no Test, with lead source)
 async function postSaveContacts(contactDataArray) {
     console.log('en postSaveContacts ***');
-
     let connection;
     
     if (!Array.isArray(contactDataArray) || contactDataArray.length === 0) {
@@ -161,13 +162,16 @@ async function postSaveContacts(contactDataArray) {
             if (!filteredContactData.source_name || !filteredContactData.status_name || !filteredContactData.location) {
                 console.log('source_name, status_name o location son nulos o vacíos. No se guardará el contacto.');
                 continue;
+            } else {
+                await validateInsertContactFiel(connection, filteredContactData.source_name, filteredContactData.location, filteredContactData.cf_string_61);
+                filteredContactData.id_company = await getAdjustedIdCompany(connection, filteredContactData.source_name);
             }
-
+            
             // Convert date_created from ISO timestamp to DATETIME format and save it in date_create
             if (filteredContactData.date_created) {
                 filteredContactData.date_create = convertToDatetime(filteredContactData.date_created, -5); // Adjust for UTC-5
             }
-
+            
             const checkQuery = `
                 SELECT id
                 FROM jobnimbus_contacts 
@@ -197,6 +201,8 @@ async function postSaveContacts(contactDataArray) {
                             value = 0; // Convertir null a 0 para columnas booleanas
                         }
 
+                        //TODO valores 'null' en campos de jobnimbus_contacts
+
                         // Asegurar que los valores nulos no se pasen como 'null' (cadena)
                         if (value === null) {
                             value = null; // Opcional: si MySQL soporta NULL directo en la consulta
@@ -217,6 +223,12 @@ async function postSaveContacts(contactDataArray) {
                 if (!columns.includes('status_name')) {
                     columns.push('status_name');
                     values.push(filteredContactData.status_name || 'Unknown');
+                }
+
+                // Ensure id_company is included
+                if (!columns.includes('id_company')) {
+                    columns.push('id_company');
+                    values.push(filteredContactData.id_company || 0);
                 }
 
                 const placeholders = columns.map(() => '?').join(', ');
@@ -287,8 +299,9 @@ exports.updateProjects = async () => {
             FROM jobnimbus_contacts 
             WHERE status_name NOT IN (?, ?, ?)
             AND YEAR(date_create) >= ?
+            AND is_active = ?
         `;
-        const [contacts] = await connection.execute(query, [...excludedStatuses, new Date().getFullYear()]);
+        const [contacts] = await connection.execute(query, [...excludedStatuses, new Date().getFullYear(), 1]);
         connection.release();
 
         const updateContact = async (contact) => {
@@ -381,8 +394,13 @@ exports.updateProjects = async () => {
                     console.log(`No se necesita actualizar el contacto con jnid ${jnid}`);
                 }
             } catch (error) {
-                console.error(`Error al actualizar el contacto con jnid ${jnid}:`, error.response ? error.response.data : error.message);
-                logError(`Error al actualizar el contacto con jnid ${jnid}: ${error.response ? error.response.data : error.message}`);
+                if (error.response && error.response.data === 'Not Found') {
+                    console.log(`El contacto con jnid ${jnid} no se encontró. Marcándolo como inactivo.`);
+                    await updateContactIsActive(connection, jnid);
+                } else {
+                    console.error(`Error al actualizar el contacto con jnid ${jnid}:`, error.response ? error.response.data : error.message);
+                    logError(`Error al actualizar el contacto con jnid ${jnid}: ${error.response ? error.response.data : error.message}`);
+                }
             }
         };
 
@@ -392,6 +410,60 @@ exports.updateProjects = async () => {
         logError(`Error al obtener los contactos: ${error.message}`);
     } finally {
         isUpdatingProjects = false;
+    }
+};
+
+exports.updateExistingContactsIdCompany = async () => {
+    console.log('Iniciando la actualización de id_company para registros existentes...');
+    let connection;
+
+    try {
+        connection = await db.getConnection();
+
+        // Obtener todos los registros existentes en jobnimbus_contacts
+        const [contacts] = await connection.execute(`
+            SELECT id, source_name
+            FROM jobnimbus_contacts
+            WHERE id_company IS NULL OR id_company = 0
+        `);
+
+        if (contacts.length === 0) {
+            console.log('No hay registros pendientes de actualizar.');
+            return;
+        }
+
+        for (const contact of contacts) {
+            const { id, source_name } = contact;
+
+            if (!source_name) {
+                console.log(`El contacto con ID ${id} no tiene source_name. Saltando...`);
+                continue;
+            }
+
+            try {
+                // Llamar al procedimiento almacenado para ajustar el id_company
+                const adjustedIdCompany = await getAdjustedIdCompany(connection, source_name);
+               
+                // Actualizar el registro con el id_company ajustado
+                await connection.execute(`
+                    UPDATE jobnimbus_contacts
+                    SET id_company = ?
+                    WHERE id = ?
+                `, [adjustedIdCompany, id]);
+
+                console.log(`Registro con ID ${id} actualizado con id_company = ${adjustedIdCompany}`);
+            } catch (error) {
+                console.error(`Error al ajustar id_company para el contacto con ID ${id}:`, error.message);
+                logError(`Error al ajustar id_company para el contacto con ID ${id}: ${error.message}`);
+            }
+        }
+
+        console.log('Actualización de id_company completada.');
+    } catch (error) {
+        console.error('Error al actualizar id_company para registros existentes:', error.message);
+        logError(`Error al actualizar id_company para registros existentes: ${error.message}`);
+    } finally {
+        if (connection) connection.release();
     }
 };
 
@@ -407,4 +479,46 @@ const convertToDatetime = (unixTimestamp, offsetHours = 0) => {
     const adjustedDate = new Date(dateUTC.getTime() + offsetHours * 3600 * 1000); // Adjust for timezone
     return adjustedDate.toISOString().slice(0, 19).replace('T', ' ');
 };
+
+async function validateInsertContactFiel(connection, sourceName, id_location_jobnimbus, serviceRequired) {
+    try {
+        const idLocation = typeof id_location_jobnimbus === 'object' && id_location_jobnimbus !== null && 'id' in id_location_jobnimbus
+            ? id_location_jobnimbus.id
+            : id_location_jobnimbus;
+
+        const [rows] = await connection.execute('CALL validateInsertContactFiel(?, ?, ?)', [sourceName, idLocation, serviceRequired]);
+    } catch (error) {
+        console.error('Error al validar o insertar source_name o location:', error.message);
+        throw error;
+    }
+}
+
+const updateContactIsActive = async (connection, jnid) => {
+    try {
+        const [rows] = await connection.execute('CALL updateContactIsActive(?)', [jnid]);
+        console.log(`El contacto con jnid ${jnid} se marcó como inactivo (is_active = 0) usando el procedimiento almacenado.`);
+    } catch (error) {
+        console.error(`Error al actualizar is_active para el contacto con jnid ${jnid}:`, error.message);
+        logError(`Error al actualizar is_active para el contacto con jnid ${jnid}: ${error.message}`);
+    }
+};
+
+const getAdjustedIdCompany = async (connection, source_name) => {
+    try {
+        const [result] = await connection.execute(`
+            CALL adjust_id_company(?, @adjusted_id_company)
+        `, [source_name]);
+
+        // Obtener el valor ajustado de id_company
+        const [adjustedResult] = await connection.execute(`
+            SELECT @adjusted_id_company AS id_company
+        `);
+        return adjustedResult[0].id_company;
+    } catch (error) {
+        console.error(`Error al ajustar id_company para source_name ${source_name}:`, error.message);
+        logError(`Error al ajustar id_company para source_name ${source_name}: ${error.message}`);
+        throw error;
+    }
+};
+
 
