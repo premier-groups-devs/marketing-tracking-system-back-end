@@ -18,7 +18,7 @@ const jobNimbusAPI = axios.create({
 let isProcessing = false;
 let isUpdatingProjects = false;
 
-const allowedColumns = [     
+const allowedColumns = [
     'first_name'
     , 'last_name'
     , 'email'
@@ -61,7 +61,7 @@ const allowedColumns = [
     , 'last_invoice_jnid'
     , 'last_invoice_number'
     , 'cf_date_6'
-    , 'cf_string_53' 
+    , 'cf_string_53'
     , 'cf_string_54'
     , 'cf_double_1'
     , 'cf_double_19'
@@ -71,6 +71,12 @@ const allowedColumns = [
     , 'cf_string_61' //Service Required
     , 'cf_boolean_11' //Valida Appointment Set
     , 'cf_date_7'  //Valida Demo Valid
+    , 'cf_double_7' //Change of Order #1 Amount
+    , 'cf_double_14' //Change of Order #2 Amount
+    , 'cf_double_15' //Change of Order #3 Amount
+    , 'cf_date_8' //Change of Order #1 Date
+    , 'cf_date_12' //Change of Order #2 Date
+    , 'cf_date_18' //Change of Order #3 Date
 ];
 
 const logFilePath = path.join(__dirname, '../../logs/error.log');
@@ -85,7 +91,7 @@ const logError = (message) => {
     fs.appendFileSync(logFilePath, logMessage);
 };
 
-exports.getContactsInterval = async (jnid, manualStartDate = null) => {
+exports.getContactsInterval = async (manualStartDate = null) => {
     console.log('en getContactsInterval ***');
 
     if (isProcessing) {
@@ -114,13 +120,13 @@ exports.getContactsInterval = async (jnid, manualStartDate = null) => {
                 }
             ]
         });
-       
+
         const response = await jobNimbusAPI.get(`/contacts/?filter=${filterQuery}`);
         const result = response.data;
 
-        if(result.results && result.results.length > 0)
+        if (result.results && result.results.length > 0)
             await postSaveContacts(result.results);
-        
+
     } catch (error) {
         console.error('Error al obtener el contrato:', error.response ? error.response.data : error.message);
         logError(`Error al obtener el contrato: ${error.response ? error.response.data : error.message}`);
@@ -134,7 +140,7 @@ exports.getContactsInterval = async (jnid, manualStartDate = null) => {
 async function postSaveContacts(contactDataArray) {
     console.log('en postSaveContacts ***');
     let connection;
-    
+
     if (!Array.isArray(contactDataArray) || contactDataArray.length === 0) {
         console.log("El arreglo contactDataArray está vacío o no es un arreglo válido.");
         return;
@@ -149,7 +155,7 @@ async function postSaveContacts(contactDataArray) {
                     obj[key] = contactData[key];
                 } else {
                     // Asignar valores por defecto para los campos faltantes
-                    if (key === 'cf_double_1' || key === 'cf_double_19' || key === 'cf_double_8' || key === 'cf_double_5' || key === 'cf_boolean_11' || key === 'last_estimate_date_created' || key==='last_estimate_date_estimate' || key==='last_invoice_date_created' || key==='last_invoice_date_invoice' || key==='cf_date_6' || key==='cf_date_7') {
+                    if (key === 'cf_double_1' || key === 'cf_double_19' || key === 'cf_double_8' || key === 'cf_double_5' || key === 'cf_boolean_11' || key === 'last_estimate_date_created' || key === 'last_estimate_date_estimate' || key === 'last_invoice_date_created' || key === 'last_invoice_date_invoice' || key === 'cf_date_6' || key === 'cf_date_7') {
                         obj[key] = 0; // Valor por defecto para campos numéricos
                     } else {
                         obj[key] = null; // Valor por defecto para otros campos
@@ -158,20 +164,22 @@ async function postSaveContacts(contactDataArray) {
                 return obj;
             }, {});
 
+            //TODO VALIDAR QUE CAMPOS ADICIONALES SON NECESARIOS QUE NO SEAN NULOS 
             // Validar que source_name, status_name y location no sean nulos o vacíos
             if (!filteredContactData.source_name || !filteredContactData.status_name || !filteredContactData.location) {
                 console.log('source_name, status_name o location son nulos o vacíos. No se guardará el contacto.');
                 continue;
             } else {
-                await validateInsertContactFiel(connection, filteredContactData.source_name, filteredContactData.location, filteredContactData.cf_string_61);
-                filteredContactData.id_company = await getAdjustedIdCompany(connection, filteredContactData.source_name);
+                //TODO query validateInsertContactFiel y adjust_id_company en mysql
+                //await validateInsertContactFiel(connection, filteredContactData.source_name, filteredContactData.location, filteredContactData.cf_string_61);
+                //filteredContactData.id_company = await getAdjustedIdCompany(connection, filteredContactData.source_name);
             }
-            
+
             // Convert date_created from ISO timestamp to DATETIME format and save it in date_create
             if (filteredContactData.date_created) {
                 filteredContactData.date_create = convertToDatetime(filteredContactData.date_created, -5); // Adjust for UTC-5
             }
-            
+
             const checkQuery = `
                 SELECT id
                 FROM jobnimbus_contacts 
@@ -201,13 +209,11 @@ async function postSaveContacts(contactDataArray) {
                             value = 0; // Convertir null a 0 para columnas booleanas
                         }
 
-                        //TODO valores 'null' en campos de jobnimbus_contacts
-
                         // Asegurar que los valores nulos no se pasen como 'null' (cadena)
-                        if (value === null) {
+                        if (value === 'null' || value === 'undefined' || value === '') {
                             value = null; // Opcional: si MySQL soporta NULL directo en la consulta
                         }
-                        
+
                         columns.push(key);
                         values.push(value);
                     }
@@ -225,17 +231,18 @@ async function postSaveContacts(contactDataArray) {
                     values.push(filteredContactData.status_name || 'Unknown');
                 }
 
-                // Ensure id_company is included
-                if (!columns.includes('id_company')) {
-                    columns.push('id_company');
-                    values.push(filteredContactData.id_company || 0);
-                }
+                //TODO evaluate if is necessary to add id_company
+                // // Ensure id_company is included
+                // if (!columns.includes('id_company')) {
+                //     columns.push('id_company');
+                //     values.push(filteredContactData.id_company || 0);
+                // }
 
                 const placeholders = columns.map(() => '?').join(', ');
 
                 // Agregar console.log para columns y placeholders
-                //console.log('Columns:', columns.join(', '));
-                //console.log('Placeholders:', placeholders);
+                // console.log('Columns:', columns.join(', '));
+                // console.log('Placeholders:', placeholders);
 
                 const insertQuery = `
                     INSERT INTO jobnimbus_contacts (${columns.join(', ')})
@@ -257,7 +264,7 @@ async function postSaveContacts(contactDataArray) {
         console.error('Error al guardar o actualizar los datos en la base de datos:', error.message);
         logError(`Error al guardar o actualizar los datos en la base de datos: ${error.message}`);
     } finally {
-        if (connection) connection.release(); 
+        if (connection) connection.release();
     }
 }
 
@@ -329,7 +336,7 @@ exports.updateProjects = async () => {
                     WHERE id_jobnimbus_contacts = ? 
                 `;
                 const [historicalCheckResult] = await connection.execute(historicalCheckQuery, [id]);
-                
+
                 if (result.cf_boolean_11 && !historicalCheckResult.some(record => record.status_name === 'Appointment Valid')) {
                     result.status_name = 'Appointment Valid';
                 }
@@ -351,7 +358,19 @@ exports.updateProjects = async () => {
                                 value = JSON.stringify(value);
                             } else if (value === '') {
                                 value = null;
+                            } else if (typeof value === 'number' && isNaN(value)) {
+                                value = 0; // Manejar valores NaN convirtiéndolos a 0
+                            } else if (value === null && key.startsWith('cf_double_')) {
+                                value = 0; // Convertir null a 0 para columnas numéricas
+                            } else if (value === null && key.startsWith('cf_boolean_')) {
+                                value = 0; // Convertir null a 0 para columnas booleanas
                             }
+
+                            // Asegurar que los valores nulos no se pasen como 'null' (cadena)
+                            if (value === 'null' || value === 'undefined' || value === '') {
+                                value = null; // Opcional: si MySQL soporta NULL directo en la consulta
+                            }
+
                             updateColumns.push(`${key} = ?`);
                             updateValues.push(value);
                         }
@@ -387,11 +406,9 @@ exports.updateProjects = async () => {
                         INSERT INTO jobnimbus_contacts_status_historicals (id_jobnimbus_contacts, status_name, date_create)
                         VALUES (?, ?, NOW())
                     `;
-                    
+
                     await connection.execute(historicalQuery, [id, result.status_name || 'Unknown']);
                     connection.release();
-                } else {
-                    console.log(`No se necesita actualizar el contacto con jnid ${jnid}`);
                 }
             } catch (error) {
                 if (error.response && error.response.data === 'Not Found') {
@@ -443,7 +460,7 @@ exports.updateExistingContactsIdCompany = async () => {
             try {
                 // Llamar al procedimiento almacenado para ajustar el id_company
                 const adjustedIdCompany = await getAdjustedIdCompany(connection, source_name);
-               
+
                 // Actualizar el registro con el id_company ajustado
                 await connection.execute(`
                     UPDATE jobnimbus_contacts
