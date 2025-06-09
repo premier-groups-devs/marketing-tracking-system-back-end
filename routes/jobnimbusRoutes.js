@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const jobnimbusController = require('../controllers/jobnimbusController');
-const five_minute_interval = parseInt(process.env.ONE_MINUTE_INTERVAl); // Convertir a número
+const one_minute_interval = parseInt(process.env.ONE_MINUTE_INTERVAl); // Convertir a número
 const one_hour_interval = parseInt(process.env.ONE_HOUR_INTERVAL); // Convertir a número
 
 // Define your routes here
@@ -16,7 +16,7 @@ module.exports = router;
 
 if (!isNaN(one_hour_interval)) {
     setInterval(() => {
-        jobnimbusController.getContactsInterval('m3j7sg8dy3hkb13ej5obpbc','');
+        jobnimbusController.getContactsInterval('');
         jobnimbusController.updateProjects();
         //jobnimbusController.updateExistingContactsIdCompany()
     }, one_hour_interval); 
