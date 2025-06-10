@@ -17,12 +17,13 @@ exports.marketingChannelsList = async (req, res) => {
     });
   }
 
-  if (!token) {
-    return res.status(400).json({ 
-      success: false,
-      message: "Token not found in cookie." 
-    });
-  }
+  //TODO review tokens
+  // if (!token) {
+  //   return res.status(400).json({ 
+  //     success: false,
+  //     message: "Token not found in cookie." 
+  //   });
+  // }
 
   let connection;
   try {

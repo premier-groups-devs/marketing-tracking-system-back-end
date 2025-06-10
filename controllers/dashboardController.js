@@ -21,12 +21,13 @@ exports.dashboard = async (req, res) => {
     });
   }
 
-  if (!token) {
-    return res.status(400).json({ 
-      success: false,
-      message: "Token not found in cookie." 
-    });
-  }
+  //TODO review tokens
+  // if (!token) {
+  //   return res.status(400).json({ 
+  //     success: false,
+  //     message: "Token not found in cookie." 
+  //   });
+  // }
 
   try {
     const dashboardData = await exports.getDashboardData(req.query.startDate, req.query.endDate, req.query.citys, req.query.invalid);
