@@ -73,8 +73,6 @@ exports.loginUser = async (req, res) => {
     if (!validPassword) return res.status(401).json({ message: 'Password incorrect' });
     if (user.is_active === 0) return res.status(401).json({ message: 'User inactive' });
 
-    console.log('User found:', user);
-
     // Crear y enviar token JWT
     const token = jwt.sign(
       { 
@@ -90,16 +88,12 @@ exports.loginUser = async (req, res) => {
       }
     );
 
-    console.log('Token generated:', token);
-
     res.cookie('token', token, {
       httpOnly: true, // Solo accesible a través de HTTP
       secure: true, // Solo en HTTPS en producción
       maxAge: one_hour_interval, // 1 hora en milisegundos
       sameSite: 'None', // Para proteger contra CSRF
     });
-
-    console.log('Cookie set with token:', token);
 
     const currentTime = moment(); // Fecha y hora actual
     const expirationTime = currentTime.clone().add(one_hour_interval, 'milliseconds'); // Sumar expiresIntervalMs
@@ -155,10 +149,11 @@ exports.logoutUser = (req, res) => {
       message: "Session completed successfully." 
     });
   } else {
-    return res.status(400).json({ 
-      success: false,
-      message: "Token not found in cookie." 
-    });
+    //TODO review tokens
+    // return res.status(400).json({ 
+    //   success: false,
+    //   message: "Token not found in cookie." 
+    // });
   }
 };
 
@@ -223,12 +218,13 @@ exports.userList = async (req, res) => {
     });
   }
 
-  if (!token) {
-    return res.status(400).json({ 
-      success: false,
-      message: "Token not found in cookie." 
-    });
-  }
+  //TODO review tokens
+  // if (!token) {
+  //   return res.status(400).json({ 
+  //     success: false,
+  //     message: "Token not found in cookie." 
+  //   });
+  // }
 
   let connection;
   try {
