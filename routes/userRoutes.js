@@ -17,7 +17,7 @@ router.post(
   ],
   userController.loginUser
 );
-router.post('/logout', authenticateToken, userController.logoutUser);
+router.post('/logout', userController.logoutUser);
 router.post('/renew-token', authenticateToken, userController.renewToken);
 router.get('/list', authenticateToken, userController.userList);
 router.post(
