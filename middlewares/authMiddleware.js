@@ -4,23 +4,26 @@ const revokedTokens = new Map();
 exports.authenticateToken = (req, res, next) => {
   const token = req.cookies.token;
 
-  if (!token) {
-    return res.status(403).json({ message: "Token not provided." });
-  }
+  //TODO review tokens
+  // if (!token) {
+  //   return res.status(403).json({ message: "Token not provided." });
+  // }
 
-  // Verificar si el token ha sido revocado
-  if (revokedTokens.has(token)) {
-    return res.status(401).json({ message: "Invalid token or expired session." });
-  }
+  // // Verificar si el token ha sido revocado
+  // if (revokedTokens.has(token)) {
+  //   return res.status(401).json({ message: "Invalid token or expired session." });
+  // }
 
-  // Verificar la validez del token
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(401).json({ message: "Invalid token." });
-    }
-    req.user = user;
-    next();
-  });
+  // // Verificar la validez del token
+  // jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+  //   if (err) {
+  //     return res.status(401).json({ message: "Invalid token." });
+  //   }
+  //   req.user = user;
+  //   next();
+  // });
+
+  next();
 };
 
 // Función para revocar un token
