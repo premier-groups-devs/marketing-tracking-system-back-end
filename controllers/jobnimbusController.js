@@ -37,7 +37,7 @@ const allowedColumns = [
     , 'last_estimate'
     , 'approved_invoice_due'
     , 'status_name'
-    , 'cf_string_10'
+    , 'cf_string_10'    //Work Type
     , 'sales_rep_name'
     , 'sales_rep'
     , 'record_type_name'
@@ -77,6 +77,7 @@ const allowedColumns = [
     , 'cf_date_8' //Change of Order #1 Date
     , 'cf_date_12' //Change of Order #2 Date
     , 'cf_date_18' //Change of Order #3 Date
+    , 'cf_string_37' //Roof type
 ];
 
 const logFilePath = path.join(__dirname, '../../logs/error.log');
