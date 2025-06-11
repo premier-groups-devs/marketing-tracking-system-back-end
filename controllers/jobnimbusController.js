@@ -78,6 +78,7 @@ const allowedColumns = [
     , 'cf_date_12' //Change of Order #2 Date
     , 'cf_date_18' //Change of Order #3 Date
     , 'cf_string_37' //Roof type
+    , 'cf_string_21' //Estimator
 ];
 
 const logFilePath = path.join(__dirname, '../../logs/error.log');
