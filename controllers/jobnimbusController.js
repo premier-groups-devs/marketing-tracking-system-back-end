@@ -64,7 +64,7 @@ const allowedColumns = [
     , 'cf_string_53'
     , 'cf_string_54'
     , 'cf_double_1'
-    , 'cf_double_19'
+    , 'cf_double_19' //Contingency Amount
     , 'cf_double_8'
     , 'cf_string_15'
     , 'cf_double_5' // Valida monto de Signed Contract
@@ -81,6 +81,8 @@ const allowedColumns = [
     , 'cf_string_21' //Estimator
     , 'cf_date_24' //App Set On
     , 'cf_date_19' //Contract Signed Date
+    , 'cf_double_2' //Scope (RCV)
+
 ];
 
 const logFilePath = path.join(__dirname, '../../logs/error.log');
