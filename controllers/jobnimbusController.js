@@ -142,7 +142,6 @@ exports.getContactsInterval = async (manualStartDate = null) => {
     }
 };
 
-//TODO filtrar usuarios validos de jobnimbus en los procedimientos de mysql (no QA, no Test, with lead source)
 async function postSaveContacts(contactDataArray) {
     console.log('en postSaveContacts ***');
     let connection;
@@ -264,7 +263,16 @@ async function postSaveContacts(contactDataArray) {
                     VALUES (?, ?, ?)
                 `;
                 await connection.execute(historicalQuery, [insertedId, filteredContactData.status_name || 'Unknown', filteredContactData.date_create]);
-            }
+            } 
+            // else{
+            //     // Si no se insertó un nuevo contacto, se puede actualizar el existente
+            //     const updateQuery = `
+            //         UPDATE jobnimbus_contacts
+            //         SET ${columns.map((col, index) => `${col} = ?`).join(', ')}
+            //         WHERE id = ?
+            //     `;
+            //     await connection.execute(updateQuery, [...values, filteredContactData.id]);
+            // }
         }
     } catch (error) {
         console.error('Error al guardar o actualizar los datos en la base de datos:', error.message);
@@ -388,7 +396,7 @@ exports.updateProjects = async () => {
                         updateValues.push(result.status_name || 'Unknown');
                     }*/
 
-                    if (updateColumns.length > 0) {
+                    // if (updateColumns.length > 0) {
                         //console.log('\x1b[33m%s\x1b[0m', 'Insert: ' + JSON.stringify(updateColumns));
                         //console.log('\x1b[32m%s\x1b[0m', 'Into: ' + JSON.stringify(updateValues));
 
@@ -404,9 +412,9 @@ exports.updateProjects = async () => {
 
                         connection = await db.getConnection();
                         await connection.execute(updateQuery, updateValues);
-                    } else {
-                        console.log(`No hay columnas para actualizar para el contacto con jnid ${jnid}`);
-                    }
+                    // } else {
+                    //     console.log(`No hay columnas para actualizar para el contacto con jnid ${jnid}`);
+                    // }
 
                     const historicalQuery = `
                         INSERT INTO jobnimbus_contacts_status_historicals (id_jobnimbus_contacts, status_name, date_create)
