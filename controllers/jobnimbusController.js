@@ -322,6 +322,8 @@ exports.updateProjects = async () => {
             AND YEAR(date_create) >= ?
             AND is_active = ?
         `;
+        // -- AND date_create BETWEEN '2025-06-10' AND '2025-06-20'
+        
         const [contacts] = await connection.execute(query, [...excludedStatuses, new Date().getFullYear(), 1]);
         connection.release();
 
@@ -396,7 +398,7 @@ exports.updateProjects = async () => {
                         updateValues.push(result.status_name || 'Unknown');
                     }*/
 
-                    // if (updateColumns.length > 0) {
+                    if (updateColumns.length > 0) {
                         //console.log('\x1b[33m%s\x1b[0m', 'Insert: ' + JSON.stringify(updateColumns));
                         //console.log('\x1b[32m%s\x1b[0m', 'Into: ' + JSON.stringify(updateValues));
 
@@ -412,6 +414,7 @@ exports.updateProjects = async () => {
 
                         connection = await db.getConnection();
                         await connection.execute(updateQuery, updateValues);
+                    }
                     // } else {
                     //     console.log(`No hay columnas para actualizar para el contacto con jnid ${jnid}`);
                     // }
