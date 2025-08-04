@@ -16,19 +16,31 @@ dotenv.config(); // Ensure environment variables are loaded
 app.use(cookieParser());
 
 // Configura el origen permitido para CORS
-const origin = process.env.CLIENT_ORIGIN || 'http://localhost:8080'; // Usa variable de entorno o localhost
+// CLIENT_ORIGINS="http://localhost:8081,https://mi-app-frontend.com,https://otra-app.com"
+const allowedOrigins = (process.env.CLIENT_ORIGINS || 'http://localhost:8081')
+  .split(',')
+  .map(o => o.trim());
 
 // Middlewares para seguridad y manejo de CORS
 app.use(helmet());
 app.use(cors({
-  origin: origin, // Permitir origen configurado
+  origin: (incomingOrigin, callback) => {
+    // Si no hay origen (p.ej. petición curl o mobile), lo permitimos de todas formas:
+    if (!incomingOrigin) return callback(null, true);
+
+    if (allowedOrigins.includes(incomingOrigin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`Origen ${incomingOrigin} no autorizado por CORS`));
+    }
+  },
   credentials: true, // Permite el envío de cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos permitidos
   allowedHeaders: ['Content-Type', 'Authorization'], // Cabeceras permitidas
 }));
 
 // Middleware para procesar JSON
-app.use(express.json());  
+app.use(express.json());
 
 // Ruta de prueba de la API
 app.get('/api/health', (req, res) => {
