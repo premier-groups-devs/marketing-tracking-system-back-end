@@ -17,11 +17,10 @@ app.use(cookieParser());
 
 // Configura el origen permitido para CORS
 // CLIENT_ORIGINS="http://localhost:4200,https://marketing-tracking-system-f-0lpxu.kinsta.page,https://victorious-island-037d99b10.2.azurestaticapps.net"
-const allowedOrigins = (process.env.CLIENT_ORIGINS || "http://localhost:4200,https://marketing-tracking-system-f-0lpxu.kinsta.page,https://victorious-island-037d99b10.2.azurestaticapps.net")
+const allowedOrigins = (process.env.CLIENT_ORIGINS || "http://localhost:4200")
   .split(',')
   .map(o => o.trim());
 
-//TODO REVIEW CORS CONFIG
 // Middlewares para seguridad y manejo de CORS
 const corsOptions = {
   origin: (incomingOrigin, callback) => {
@@ -43,23 +42,6 @@ app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
 app.use(helmet());
-// app.use(cors({
-//   origin: (incomingOrigin, callback) => {
-//     // Si no hay origen (p.ej. petición curl o mobile), lo permitimos de todas formas:
-//     if (!incomingOrigin) return callback(null, true);
-//     console.log('allowedOrigins: ', allowedOrigins);
-
-//     if (allowedOrigins.includes(incomingOrigin)) {
-//       console.log(`CORS permitido para origen: ${incomingOrigin}`);
-//       callback(null, true);
-//     } else {
-//       callback(new Error(`Origen ${incomingOrigin} no autorizado por CORS`));
-//     }
-//   },
-//   credentials: true, // Permite el envío de cookies
-//   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos permitidos
-//   allowedHeaders: ['Content-Type', 'Authorization'], // Cabeceras permitidas
-// }));
 
 // Middleware para procesar JSON
 app.use(express.json());
