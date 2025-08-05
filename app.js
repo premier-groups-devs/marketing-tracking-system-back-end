@@ -23,24 +23,43 @@ const allowedOrigins = (process.env.CLIENT_ORIGINS || "http://localhost:4200,htt
 
 //TODO REVIEW CORS CONFIG
 // Middlewares para seguridad y manejo de CORS
-app.use(helmet());
-app.use(cors({
+const corsOptions = {
   origin: (incomingOrigin, callback) => {
-    // Si no hay origen (p.ej. petición curl o mobile), lo permitimos de todas formas:
-    if (!incomingOrigin) return callback(null, true);
-    console.log('allowedOrigins: ', allowedOrigins);
-
-    if (allowedOrigins.includes(incomingOrigin)) {
+    if (!incomingOrigin || allowedOrigins.includes(incomingOrigin)) {
       console.log(`CORS permitido para origen: ${incomingOrigin}`);
-      callback(null, true);
-    } else {
-      callback(new Error(`Origen ${incomingOrigin} no autorizado por CORS`));
+      return callback(null, true);
     }
+    callback(new Error(`Origin ${incomingOrigin} not allowed by CORS`));
   },
-  credentials: true, // Permite el envío de cookies
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos permitidos
-  allowedHeaders: ['Content-Type', 'Authorization'], // Cabeceras permitidas
-}));
+  credentials: true,
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization']
+};
+
+// 1) Handle preflight across the board
+app.options('*', cors(corsOptions));
+
+// 2) Then apply CORS to all actual routes
+app.use(cors(corsOptions));
+
+app.use(helmet());
+// app.use(cors({
+//   origin: (incomingOrigin, callback) => {
+//     // Si no hay origen (p.ej. petición curl o mobile), lo permitimos de todas formas:
+//     if (!incomingOrigin) return callback(null, true);
+//     console.log('allowedOrigins: ', allowedOrigins);
+
+//     if (allowedOrigins.includes(incomingOrigin)) {
+//       console.log(`CORS permitido para origen: ${incomingOrigin}`);
+//       callback(null, true);
+//     } else {
+//       callback(new Error(`Origen ${incomingOrigin} no autorizado por CORS`));
+//     }
+//   },
+//   credentials: true, // Permite el envío de cookies
+//   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos permitidos
+//   allowedHeaders: ['Content-Type', 'Authorization'], // Cabeceras permitidas
+// }));
 
 // Middleware para procesar JSON
 app.use(express.json());
