@@ -16,19 +16,22 @@ dotenv.config(); // Ensure environment variables are loaded
 app.use(cookieParser());
 
 // Configura el origen permitido para CORS
-// CLIENT_ORIGINS="http://localhost:8081,https://mi-app-frontend.com,https://otra-app.com"
-const allowedOrigins = (process.env.CLIENT_ORIGINS || 'http://localhost:8081')
+// CLIENT_ORIGINS="http://localhost:4200,https://marketing-tracking-system-f-0lpxu.kinsta.page,https://victorious-island-037d99b10.2.azurestaticapps.net"
+const allowedOrigins = (process.env.CLIENT_ORIGINS || "http://localhost:4200,https://marketing-tracking-system-f-0lpxu.kinsta.page,https://victorious-island-037d99b10.2.azurestaticapps.net")
   .split(',')
   .map(o => o.trim());
 
+//TODO REVIEW CORS CONFIG
 // Middlewares para seguridad y manejo de CORS
 app.use(helmet());
 app.use(cors({
   origin: (incomingOrigin, callback) => {
     // Si no hay origen (p.ej. petición curl o mobile), lo permitimos de todas formas:
     if (!incomingOrigin) return callback(null, true);
+    console.log('allowedOrigins: ', allowedOrigins);
 
     if (allowedOrigins.includes(incomingOrigin)) {
+      console.log(`CORS permitido para origen: ${incomingOrigin}`);
       callback(null, true);
     } else {
       callback(new Error(`Origen ${incomingOrigin} no autorizado por CORS`));
