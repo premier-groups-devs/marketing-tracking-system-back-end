@@ -179,7 +179,7 @@ async function postSaveContacts(contactDataArray) {
             //TODO VALIDAR QUE CAMPOS ADICIONALES SON NECESARIOS QUE NO SEAN NULOS 
             // Validar que source_name, status_name y location no sean nulos o vacíos
             if (!filteredContactData.source_name || !filteredContactData.status_name || !filteredContactData.location) {
-                console.log('source_name, status_name o location son nulos o vacíos. No se guardará el contacto.');
+                console.log(`El contacto con jnid ${filteredContactData.jnid} tiene source_name, status_name o location nulos o vacíos. No se guardará el contacto.`);
                 continue;
             } else {
                 //TODO query validateInsertContactFiel y adjust_id_company en mysql
@@ -341,7 +341,7 @@ exports.updateProjects = async () => {
 
                 // Validar que source_name, status_name y location no sean nulos o vacíos
                 if (!result.source_name || !result.status_name || !result.location) {
-                    console.log(`El contacto con jnid ${result.jnid} no tiene source_name, status_name o location nulos o vacíos. No se actualizará el contacto.`);
+                    console.log(`El contacto con jnid ${result.jnid} tiene source_name, status_name o location nulos o vacíos. No se actualizará el contacto.`);
                     return;
                 }
 
@@ -407,6 +407,8 @@ exports.updateProjects = async () => {
 
                 connection = await db.getConnection();
                 await connection.execute(updateQuery, updateValues);
+
+                console.log(`Contacto con jnid ${current.jnid} actualizado correctamente.`);
 
                 //Only insert a new historical if it is a new/changed status
                 if (result && result.status_name && !historicalCheckResult.some(record => record.status_name === result.status_name)) {
