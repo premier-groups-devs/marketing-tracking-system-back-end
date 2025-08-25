@@ -119,8 +119,8 @@ exports.getContactsInterval = async (manualStartDate = null) => {
                 {
                     range: {
                         date_created: {
-                            gte: startDateTimestamp, // Fecha de inicio (timestamp)
-                            lte: Math.floor(Date.now() / 1000) //1731703899//Math.floor(Date.now() / 1000)  // Fecha de fin (timestamp actual)
+                            gte: startDateTimestamp, // Fecha de inicio (timestamp), cada 6000 es 10 minutes
+                            lte: Math.floor(Date.now() / 1000) //Math.floor(Date.now() / 1000)  // Fecha de fin (timestamp actual)
                         }
                     }
                 }
@@ -130,8 +130,15 @@ exports.getContactsInterval = async (manualStartDate = null) => {
         const response = await jobNimbusAPI.get(`/contacts/?filter=${filterQuery}`);
         const result = response.data;
 
-        if (result.results && result.results.length > 0)
+        response.data.results.forEach(contact => {
+            console.log(`Nuevo contacto encontrado: ${contact.display_name}`);
+        });
+
+        if (result.results && result.results.length > 0) {
             await postSaveContacts(result.results);
+        } else {
+            console.log('No se encontraron nuevos contactos en JobNimbus.');
+        }
 
     } catch (error) {
         console.error('Error al obtener el contrato:', error.response ? error.response.data : error.message);
@@ -186,9 +193,9 @@ async function postSaveContacts(contactDataArray) {
             }
 
             const checkQuery = `
-                SELECT id
-                FROM jobnimbus_contacts 
-                WHERE jnid = ? 
+                SELECT id, display_name, email
+                FROM jobnimbus_contacts
+                WHERE jnid = ?
             `;
             const [checkResult] = await connection.execute(checkQuery, [
                 filteredContactData.jnid,
@@ -245,10 +252,6 @@ async function postSaveContacts(contactDataArray) {
 
                 const placeholders = columns.map(() => '?').join(', ');
 
-                // Agregar console.log para columns y placeholders
-                // console.log('Columns:', columns.join(', '));
-                // console.log('Placeholders:', placeholders);
-
                 const insertQuery = `
                     INSERT INTO jobnimbus_contacts (${columns.join(', ')})
                     VALUES (${placeholders})
@@ -263,16 +266,17 @@ async function postSaveContacts(contactDataArray) {
                     VALUES (?, ?, ?)
                 `;
                 await connection.execute(historicalQuery, [insertedId, filteredContactData.status_name || 'Unknown', filteredContactData.date_create]);
-            } 
-            // else{
-            //     // Si no se insertó un nuevo contacto, se puede actualizar el existente
-            //     const updateQuery = `
-            //         UPDATE jobnimbus_contacts
-            //         SET ${columns.map((col, index) => `${col} = ?`).join(', ')}
-            //         WHERE id = ?
-            //     `;
-            //     await connection.execute(updateQuery, [...values, filteredContactData.id]);
-            // }
+            }
+            /* else {
+                console.log(`El jnid ${filteredContactData.jnid} existe (${checkResult.id}, ${checkResult.display_name}, ${checkResult.email}) actualizando los datos si es necesario.`);
+                // Si no se insertó un nuevo contacto, se puede actualizar el existente
+                const updateQuery = `
+                     UPDATE jobnimbus_contacts
+                     SET ${columns.map((col, index) => `${col} = ?`).join(', ')}
+                     WHERE id = ?
+                 `;
+                await connection.execute(updateQuery, [...values, filteredContactData.id]);
+            } */
         }
     } catch (error) {
         console.error('Error al guardar o actualizar los datos en la base de datos:', error.message);
@@ -323,25 +327,26 @@ exports.updateProjects = async () => {
             AND is_active = ?
         `;
         // -- AND date_create BETWEEN '2025-06-10' AND '2025-06-20'
-        
+
+        //INFO update todos los contactos de este año (filter is_active is not needed)
         const [contacts] = await connection.execute(query, [...excludedStatuses, new Date().getFullYear(), 1]);
+        //const [contacts] = await connection.execute(query, [...excludedStatuses, 1]);
         connection.release();
 
-        const updateContact = async (contact) => {
-            const { jnid, status_name: currentStatus, id, date_created } = contact;
-
+        const updateContact = async (current) => {
             try {
-                const response = await jobNimbusAPI.get(`/contacts/${jnid}`);
+                //Get the current contact details in JB
+                const response = await jobNimbusAPI.get(`/contacts/${current.jnid}`);
                 const result = response.data;
 
                 // Validar que source_name, status_name y location no sean nulos o vacíos
                 if (!result.source_name || !result.status_name || !result.location) {
-                    console.log('source_name, status_name o location son nulos o vacíos. No se actualizará el contacto.');
+                    console.log(`El contacto con jnid ${result.jnid} no tiene source_name, status_name o location nulos o vacíos. No se actualizará el contacto.`);
                     return;
                 }
 
                 if (result.status_name === 'Signed Contract' && (!result.cf_double_5 || result.cf_double_5 <= 0)) {
-                    console.log(`El contacto con jnid ${jnid} tiene el estado 'Signed Contract' pero cf_double_5 es 0 o null. No se actualizará.`);
+                    console.log(`El contacto con jnid ${result.jnid} tiene el estado 'Signed Contract' pero cf_double_5 es 0 o null. No se actualizará.`);
                     return;
                 }
 
@@ -351,7 +356,7 @@ exports.updateProjects = async () => {
                     FROM jobnimbus_contacts_status_historicals 
                     WHERE id_jobnimbus_contacts = ? 
                 `;
-                const [historicalCheckResult] = await connection.execute(historicalCheckQuery, [id]);
+                const [historicalCheckResult] = await connection.execute(historicalCheckQuery, [current.id]);
 
                 if (result.cf_boolean_11 && !historicalCheckResult.some(record => record.status_name === 'Appointment Valid')) {
                     result.status_name = 'Appointment Valid';
@@ -361,79 +366,68 @@ exports.updateProjects = async () => {
                     result.status_name = 'Demo Valid';
                 }
 
-                if (result && result.status_name && !historicalCheckResult.some(record => record.status_name === result.status_name)) {
-                    console.log(`Actualizando status_name para jnid: ${jnid}`);
+                //Update contacts in our BD using the last data from JobNimbus
+                const updateColumns = [];
+                const updateValues = [];
 
-                    const updateColumns = [];
-                    const updateValues = [];
-
-                    for (const key of allowedColumns) {
-                        if (result.hasOwnProperty(key)) {
-                            let value = result[key];
-                            if (Array.isArray(value) || typeof value === 'object') {
-                                value = JSON.stringify(value);
-                            } else if (value === '') {
-                                value = null;
-                            } else if (typeof value === 'number' && isNaN(value)) {
-                                value = 0; // Manejar valores NaN convirtiéndolos a 0
-                            } else if (value === null && key.startsWith('cf_double_')) {
-                                value = 0; // Convertir null a 0 para columnas numéricas
-                            } else if (value === null && key.startsWith('cf_boolean_')) {
-                                value = 0; // Convertir null a 0 para columnas booleanas
-                            }
-
-                            // Asegurar que los valores nulos no se pasen como 'null' (cadena)
-                            if (value === 'null' || value === 'undefined' || value === '') {
-                                value = null; // Opcional: si MySQL soporta NULL directo en la consulta
-                            }
-
-                            updateColumns.push(`${key} = ?`);
-                            updateValues.push(value);
+                for (const key of allowedColumns) {
+                    if (result.hasOwnProperty(key)) {
+                        let value = result[key];
+                        if (Array.isArray(value) || typeof value === 'object') {
+                            value = JSON.stringify(value);
+                        } else if (value === '') {
+                            value = null;
+                        } else if (typeof value === 'number' && isNaN(value)) {
+                            value = 0; // Manejar valores NaN convirtiéndolos a 0
+                        } else if (value === null && key.startsWith('cf_double_')) {
+                            value = 0; // Convertir null a 0 para columnas numéricas
+                        } else if (value === null && key.startsWith('cf_boolean_')) {
+                            value = 0; // Convertir null a 0 para columnas booleanas
                         }
+
+                        // Asegurar que los valores nulos no se pasen como 'null' (cadena)
+                        if (value === 'null' || value === 'undefined' || value === '') {
+                            value = null; // Opcional: si MySQL soporta NULL directo en la consulta
+                        }
+
+                        updateColumns.push(`${key} = ?`);
+                        updateValues.push(value);
                     }
+                }
 
-                    // Ensure status_name is not null
-                    /*if (!updateColumns.includes('status_name')) {
-                        updateColumns.push('status_name');
-                        updateValues.push(result.status_name || 'Unknown');
-                    }*/
-
-                    if (updateColumns.length > 0) {
-                        //console.log('\x1b[33m%s\x1b[0m', 'Insert: ' + JSON.stringify(updateColumns));
-                        //console.log('\x1b[32m%s\x1b[0m', 'Into: ' + JSON.stringify(updateValues));
-
-                        // Convert date_created from ISO timestamp to DATETIME format and save it in date_create
-                        const updateQuery = `
+                // Convert date_created from ISO timestamp to DATETIME format and save it in date_create
+                const updateQuery = `
                             UPDATE jobnimbus_contacts 
                             SET ${updateColumns.join(', ')}, date_update = ?, date_create = ?
                             WHERE jnid = ?
                         `;
-                        const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-                        const adjustedDateCreate = date_created ? convertToDatetime(date_created, -5) : null; // Adjust for UTC-5
-                        updateValues.push(currentDate, adjustedDateCreate, jnid);
+                const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+                const adjustedDateCreate = current.date_created ? convertToDatetime(current.date_created, -5) : null; // Adjust for UTC-5
+                updateValues.push(currentDate, adjustedDateCreate, current.jnid);
 
-                        connection = await db.getConnection();
-                        await connection.execute(updateQuery, updateValues);
-                    }
-                    // } else {
-                    //     console.log(`No hay columnas para actualizar para el contacto con jnid ${jnid}`);
-                    // }
+                connection = await db.getConnection();
+                await connection.execute(updateQuery, updateValues);
 
+                //Only insert a new historical if it is a new/changed status
+                if (result && result.status_name && !historicalCheckResult.some(record => record.status_name === result.status_name)) {
+                    console.log(`Actualizando status_name para jnid: ${current.jnid}`);
+
+                    //TODO HISTORICAL OF CONTACTS SHOULD CONSIDER MORE FIELDS
                     const historicalQuery = `
                         INSERT INTO jobnimbus_contacts_status_historicals (id_jobnimbus_contacts, status_name, date_create)
-                        VALUES (?, ?, NOW())
-                    `;
+                        VALUES (?, ?, NOW())`;
 
-                    await connection.execute(historicalQuery, [id, result.status_name || 'Unknown']);
+                    await connection.execute(historicalQuery, [current.id, result.status_name || 'Unknown']);
                     connection.release();
                 }
             } catch (error) {
                 if (error.response && error.response.data === 'Not Found') {
-                    console.log(`El contacto con jnid ${jnid} no se encontró. Marcándolo como inactivo.`);
-                    await updateContactIsActive(connection, jnid);
+                    // TODO make procedure in BD to change inactive status
+                    // console.log(`El contacto con jnid ${current.jnid} no se encontró. Marcándolo como inactivo.`);
+                    // await updateContactIsActive(connection, current.jnid);
                 } else {
-                    console.error(`Error al actualizar el contacto con jnid ${jnid}:`, error.response ? error.response.data : error.message);
-                    logError(`Error al actualizar el contacto con jnid ${jnid}: ${error.response ? error.response.data : error.message}`);
+                    console.error(`Error al actualizar el contacto con jnid ${current.jnid}:`, error.response ? error.response.data : error.message);
+                    logError(`Error al actualizar el contacto con jnid ${current.jnid}: ${error.response ? error.response.data : error.message}`);
                 }
             }
         };
@@ -443,6 +437,7 @@ exports.updateProjects = async () => {
         console.error('Error al obtener los contactos:', error.message);
         logError(`Error al obtener los contactos: ${error.message}`);
     } finally {
+        console.log('Finalizando la actualización de contactos...');
         isUpdatingProjects = false;
     }
 };
