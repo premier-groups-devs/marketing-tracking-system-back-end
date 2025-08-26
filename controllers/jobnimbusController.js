@@ -366,53 +366,58 @@ exports.updateProjects = async () => {
                     result.status_name = 'Demo Valid';
                 }
 
-                //Update contacts in our BD using the last data from JobNimbus
-                const updateColumns = [];
-                const updateValues = [];
+                //Only insert a new historical if it is a new/changed status
+                if (result && result.status_name && !historicalCheckResult.some(record => record.status_name === result.status_name)) {
+                    console.log(`Actualizando status_name para jnid: ${current.jnid}`);
 
-                for (const key of allowedColumns) {
-                    if (result.hasOwnProperty(key)) {
-                        let value = result[key];
-                        if (Array.isArray(value) || typeof value === 'object') {
-                            value = JSON.stringify(value);
-                        } else if (value === '') {
-                            value = null;
-                        } else if (typeof value === 'number' && isNaN(value)) {
-                            value = 0; // Manejar valores NaN convirtiéndolos a 0
-                        } else if (value === null && key.startsWith('cf_double_')) {
-                            value = 0; // Convertir null a 0 para columnas numéricas
-                        } else if (value === null && key.startsWith('cf_boolean_')) {
-                            value = 0; // Convertir null a 0 para columnas booleanas
+                    //TODO Review to get a general update of contact by year
+                    //********************* */
+
+                    //Update contacts in our BD using the last data from JobNimbus
+                    const updateColumns = [];
+                    const updateValues = [];
+
+                    for (const key of allowedColumns) {
+                        if (result.hasOwnProperty(key)) {
+                            let value = result[key];
+                            if (Array.isArray(value) || typeof value === 'object') {
+                                value = JSON.stringify(value);
+                            } else if (value === '') {
+                                value = null;
+                            } else if (typeof value === 'number' && isNaN(value)) {
+                                value = 0; // Manejar valores NaN convirtiéndolos a 0
+                            } else if (value === null && key.startsWith('cf_double_')) {
+                                value = 0; // Convertir null a 0 para columnas numéricas
+                            } else if (value === null && key.startsWith('cf_boolean_')) {
+                                value = 0; // Convertir null a 0 para columnas booleanas
+                            }
+
+                            // Asegurar que los valores nulos no se pasen como 'null' (cadena)
+                            if (value === 'null' || value === 'undefined' || value === '') {
+                                value = null; // Opcional: si MySQL soporta NULL directo en la consulta
+                            }
+
+                            updateColumns.push(`${key} = ?`);
+                            updateValues.push(value);
                         }
-
-                        // Asegurar que los valores nulos no se pasen como 'null' (cadena)
-                        if (value === 'null' || value === 'undefined' || value === '') {
-                            value = null; // Opcional: si MySQL soporta NULL directo en la consulta
-                        }
-
-                        updateColumns.push(`${key} = ?`);
-                        updateValues.push(value);
                     }
-                }
 
-                // Convert date_created from ISO timestamp to DATETIME format and save it in date_create
-                const updateQuery = `
+                    // Convert date_created from ISO timestamp to DATETIME format and save it in date_create
+                    const updateQuery = `
                             UPDATE jobnimbus_contacts 
                             SET ${updateColumns.join(', ')}, date_update = ?, date_create = ?
                             WHERE jnid = ?
                         `;
-                const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-                const adjustedDateCreate = current.date_created ? convertToDatetime(current.date_created, -5) : null; // Adjust for UTC-5
-                updateValues.push(currentDate, adjustedDateCreate, current.jnid);
+                    const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+                    const adjustedDateCreate = current.date_created ? convertToDatetime(current.date_created, -5) : null; // Adjust for UTC-5
+                    updateValues.push(currentDate, adjustedDateCreate, current.jnid);
 
-                connection = await db.getConnection();
-                await connection.execute(updateQuery, updateValues);
+                    connection = await db.getConnection();
+                    await connection.execute(updateQuery, updateValues);
 
-                console.log(`Contacto con jnid ${current.jnid} actualizado correctamente.`);
+                    console.log(`Contacto con jnid ${current.jnid} actualizado correctamente.`);
 
-                //Only insert a new historical if it is a new/changed status
-                if (result && result.status_name && !historicalCheckResult.some(record => record.status_name === result.status_name)) {
-                    console.log(`Actualizando status_name para jnid: ${current.jnid}`);
+                    //********************* */
 
                     //TODO HISTORICAL OF CONTACTS SHOULD CONSIDER MORE FIELDS
                     const historicalQuery = `
