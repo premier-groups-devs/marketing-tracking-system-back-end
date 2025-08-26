@@ -322,13 +322,12 @@ exports.updateProjects = async () => {
         const query = `
             SELECT jnid, status_name, id, date_created  
             FROM jobnimbus_contacts 
-            WHERE YEAR(date_create) >= ?
-            AND is_active = ?
+            WHERE is_active = ?
         `;
         // -- AND date_create BETWEEN '2025-06-10' AND '2025-06-20'
 
         //INFO update todos los contactos de este año (filter is_active is not needed)
-        const [contacts] = await connection.execute(query, [new Date().getFullYear(), 1]);
+        const [contacts] = await connection.execute(query, [1]);
         //const [contacts] = await connection.execute(query, [1]);
         connection.release();
         console.log(`Se encontraron ${contacts.length} contactos para actualizar.`);
@@ -412,8 +411,6 @@ exports.updateProjects = async () => {
 
                 //Only insert a new historical if it is a new/changed status
                 if (result && result.status_name && !historicalCheckResult.some(record => record.status_name === result.status_name)) {
-                    console.log(`Actualizando status_name para jnid: ${current.jnid}`);
-
                     //TODO HISTORICAL OF CONTACTS SHOULD CONSIDER MORE FIELDS
                     const historicalQuery = `
                         INSERT INTO jobnimbus_contacts_status_historicals (id_jobnimbus_contacts, status_name, date_create)
