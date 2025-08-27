@@ -177,6 +177,7 @@ async function postSaveContacts(contactDataArray) {
             }, {});
 
             //TODO VALIDAR QUE CAMPOS ADICIONALES SON NECESARIOS QUE NO SEAN NULOS 
+            /*
             // Validar que source_name, status_name y location no sean nulos o vacíos
             if (!filteredContactData.source_name || !filteredContactData.status_name || !filteredContactData.location) {
                 console.log(`El contacto con jnid ${filteredContactData.jnid} tiene source_name, status_name o location nulos o vacíos. No se guardará el contacto.`);
@@ -186,6 +187,7 @@ async function postSaveContacts(contactDataArray) {
                 //await validateInsertContactFiel(connection, filteredContactData.source_name, filteredContactData.location, filteredContactData.cf_string_61);
                 //filteredContactData.id_company = await getAdjustedIdCompany(connection, filteredContactData.source_name);
             }
+            */
 
             // Convert date_created from ISO timestamp to DATETIME format and save it in date_create
             if (filteredContactData.date_created) {
@@ -202,7 +204,7 @@ async function postSaveContacts(contactDataArray) {
             ]);
 
             if (checkResult.length === 0) {
-                console.log('El jnid no existe, insertando los datos.');
+                console.log(`El jnid ${filteredContactData.jnid} - ${filteredContactData.display_name} no existe, insertando los datos.`);
                 const columns = [];
                 const values = [];
 
@@ -326,9 +328,7 @@ exports.updateProjects = async () => {
         `;
         // -- AND date_create BETWEEN '2025-06-10' AND '2025-06-20'
 
-        //INFO update todos los contactos de este año (filter is_active is not needed)
         const [contacts] = await connection.execute(query, [1]);
-        //const [contacts] = await connection.execute(query, [1]);
         connection.release();
         console.log(`Se encontraron ${contacts.length} contactos para actualizar.`);
 
