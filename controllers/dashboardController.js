@@ -55,7 +55,7 @@ exports.getDashboardData = async (startDate, endDate, citys, invalid) => {
     // Inicializa las variables para los estatus
     let arrayChannelMarketing = [];
     let arrayLeadMarketing = [];
-    let arrayRevenueMarketing = [];
+    let arraySalesMarketing = [];
     let arrayCitys = [];
     let lineChartDataPoints = [];
     connection = await db.getConnection();
@@ -76,7 +76,7 @@ exports.getDashboardData = async (startDate, endDate, citys, invalid) => {
         acc[month].push({
           city: item.city_name,
           count: item.count,
-          mount: item.mount,
+          amount: item.amount,
           percentage: Number(item.percentage).toFixed(2),
           visible: true,
           colors_charts: item.colors_charts
@@ -86,7 +86,7 @@ exports.getDashboardData = async (startDate, endDate, citys, invalid) => {
     }
 
     if (results[2].length > 0) {
-      arrayRevenueMarketing = results[2].reduce((acc, item) => {
+      arraySalesMarketing = results[2].reduce((acc, item) => {
         const month = item.month; // Asegúrate de que 'month' es la propiedad correcta en tu objeto
         if (!acc[month]) {
           acc[month] = [];
@@ -94,7 +94,7 @@ exports.getDashboardData = async (startDate, endDate, citys, invalid) => {
         acc[month].push({
           city: item.city_name,
           count: item.count,
-          mount: item.mount,
+          amount: item.amount,
           percentage: Number(item.percentage).toFixed(2),
           visible: true,
           colors_charts: item.colors_charts
@@ -145,7 +145,7 @@ exports.getDashboardData = async (startDate, endDate, citys, invalid) => {
     return {
       arrayChannelMarketing: arrayChannelMarketing,
       arrayLeadMarketing: arrayLeadMarketing,
-      arrayRevenueMarketing: arrayRevenueMarketing,
+      arraySalesMarketing: arraySalesMarketing,
       arrayCitys: arrayCitys,
       arrayKPIs: lineChartDataPoints
     };
