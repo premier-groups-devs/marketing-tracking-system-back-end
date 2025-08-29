@@ -346,6 +346,7 @@ exports.updateProjects = async () => {
                 const result = response.data;
 
                 // Validar que source_name, status_name y location no sean nulos o vacíos
+                /*
                 if (!result.source_name || !result.status_name || !result.location) {
                     console.log(`El contacto con jnid ${result.jnid} tiene source_name, status_name o location nulos o vacíos. No se actualizará el contacto.`);
                     return;
@@ -355,6 +356,7 @@ exports.updateProjects = async () => {
                     console.log(`El contacto con jnid ${result.jnid} tiene el estado 'Signed Contract' pero cf_double_5 es 0 o null. No se actualizará.`);
                     return;
                 }
+                */
 
                 // Check if the status has already been recorded in jobnimbus_contacts_status_historicals
                 const historicalCheckQuery = `
