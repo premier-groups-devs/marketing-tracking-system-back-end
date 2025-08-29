@@ -82,7 +82,14 @@ const allowedColumns = [
     , 'cf_date_24' //App Set On
     , 'cf_date_19' //Contract Signed Date
     , 'cf_double_2' //Scope (RCV)
-
+    , 'cf_string_73' //Roof Type (Not to use)
+    , 'cf_date_2' //PA Contract Signed
+    , 'cf_double_24' //Change of Order #4 Amount
+    , 'cf_double_25' //Change of Order #5 Amount
+    , 'cf_double_26' //Change of Order #6 Amount
+    , 'cf_date_27' //Change of Order #4 Date
+    , 'cf_date_28' //Change of Order #5 Date
+    , 'cf_date_29' //Change of Order #6 Date
 ];
 
 const logFilePath = path.join(__dirname, '../../logs/error.log');
